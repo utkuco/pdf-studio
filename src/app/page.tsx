@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FileText, ArrowRightLeft, Layers, Type, FileEdit, Shield, Zap, Globe, ArrowRight, Sparkles, Lock, Clock, CheckCircle, Star, ChevronDown, ChevronUp, Users, Zap as ZapIcon, Crown } from 'lucide-react';
+import { FileText, ArrowRightLeft, Layers, Type, FileEdit, Shield, Zap, Globe, ArrowRight, Sparkles, Lock, Clock, CheckCircle, Star, ChevronDown, ChevronUp, Users, Zap as ZapIcon } from 'lucide-react';
 import { LanguageSelector } from '@/lib/i18n/LanguageSelector';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { translations } from '@/lib/i18n/translations';
@@ -124,84 +124,6 @@ function TestimonialCard({ name, role, content, avatar, rating }: { name: string
           <p className="text-xs text-gray-500 dark:text-gray-400">{role}</p>
         </div>
       </div>
-    </div>
-  );
-}
-
-// Pricing Card
-function PricingCard({ name, price, features, highlighted, icon: Icon }: { name: string; price: string; features: string[]; highlighted?: boolean; icon: typeof Crown }) {
-  return (
-    <div className={cn(
-      "relative rounded-2xl p-8 transition-all duration-300",
-      highlighted 
-        ? "bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-2xl shadow-blue-500/30 scale-105" 
-        : "bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:border-gray-200 dark:hover:border-gray-700"
-    )}>
-      {highlighted && (
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-xs font-bold px-4 py-1 rounded-full">
-          Most Popular
-        </div>
-      )}
-      
-      <div className={cn(
-        "w-12 h-12 rounded-xl flex items-center justify-center mb-4",
-        highlighted ? "bg-white/20" : "bg-blue-100 dark:bg-blue-900/40"
-      )}>
-        <Icon className={cn("w-6 h-6", highlighted ? "text-white" : "text-blue-600 dark:text-blue-400")} />
-      </div>
-      
-      <h3 className={cn(
-        "text-xl font-bold mb-2",
-        highlighted ? "text-white" : "text-gray-900 dark:text-white"
-      )}>
-        {name}
-      </h3>
-      
-      <div className="mb-6">
-        <span className={cn(
-          "text-4xl font-extrabold",
-          highlighted ? "text-white" : "text-gray-900 dark:text-white"
-        )}>
-          {price}
-        </span>
-        {price !== "Free" && (
-          <span className={cn(
-            "text-sm",
-            highlighted ? "text-white/70" : "text-gray-500 dark:text-gray-400"
-          )}>
-            /month
-          </span>
-        )}
-      </div>
-      
-      <ul className="space-y-3 mb-8">
-        {features.map((feature, i) => (
-          <li key={i} className="flex items-center gap-3">
-            <CheckCircle className={cn(
-              "w-5 h-5 flex-shrink-0",
-              highlighted ? "text-white/80" : "text-emerald-500 dark:text-emerald-400"
-            )} />
-            <span className={cn(
-              "text-sm",
-              highlighted ? "text-white/90" : "text-gray-600 dark:text-gray-300"
-            )}>
-              {feature}
-            </span>
-          </li>
-        ))}
-      </ul>
-      
-      <Link
-        href="/editor"
-        className={cn(
-          "block w-full py-3 px-6 rounded-xl font-semibold text-center transition-all",
-          highlighted 
-            ? "bg-white text-blue-600 hover:bg-gray-100" 
-            : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500"
-        )}
-      >
-        {highlighted ? "Get Started" : "Start Free"}
-      </Link>
     </div>
   );
 }
@@ -599,45 +521,51 @@ export default function Home() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
-              Simple, transparent pricing
+              100% Free, Forever
             </h2>
             <p className="text-base sm:text-lg lg:text-xl text-gray-500 dark:text-gray-400">
-              Start free, upgrade when you need more power.
+              All features are completely free. No hidden costs, no premium paywalls.
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-3xl mx-auto">
-            <PricingCard 
-              name="Free Forever"
-              price="Free"
-              icon={ZapIcon}
-              features={[
-                "All PDF tools",
-                "Unlimited files",
-                "Local processing",
-                "No signup required",
-                "Basic support"
-              ]}
-            />
-            <PricingCard 
-              name="Pro"
-              price="$9"
-              icon={Crown}
-              highlighted
-              features={[
-                "Everything in Free",
-                "Priority processing",
-                "Cloud sync",
-                "Advanced security",
-                "Priority support",
-                "Batch processing"
-              ]}
-            />
+          <div className="max-w-md mx-auto">
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl p-8 shadow-2xl shadow-blue-500/30 text-white">
+              <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mb-6">
+                <ZapIcon className="w-8 h-8 text-white" />
+              </div>
+              
+              <h3 className="text-2xl font-bold mb-2">Free Forever</h3>
+              
+              <div className="mb-6">
+                <span className="text-5xl font-extrabold">$0</span>
+                <span className="text-white/70 ml-2">forever</span>
+              </div>
+              
+              <ul className="space-y-3 mb-8">
+                {[
+                  "All PDF tools",
+                  "Unlimited files",
+                  "Local processing",
+                  "No signup required",
+                  "Batch processing",
+                  "Priority support",
+                  "Cloud sync (coming soon)"
+                ].map((feature, i) => (
+                  <li key={i} className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-white/80 flex-shrink-0" />
+                    <span className="text-white/90">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              
+              <Link
+                href="/editor"
+                className="block w-full py-4 px-6 rounded-xl font-bold text-center bg-white text-blue-600 hover:bg-gray-100 transition-all"
+              >
+                Start Using Free
+              </Link>
+            </div>
           </div>
-          
-          <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-8">
-            All features are currently free! Pro features coming soon.
-          </p>
         </div>
       </section>
 
