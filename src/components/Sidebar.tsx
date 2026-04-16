@@ -206,7 +206,7 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
 
       {/* Mobile Bottom Tab Bar */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] transition-colors duration-300">
-        <div className="flex items-center justify-around h-16 px-1 overflow-x-auto">
+        <div className="flex items-center justify-between h-16 px-1">
           {tools.map((tool) => {
             const Icon = toolIcons[tool.id];
             const isActive = activeTool === tool.id;
@@ -216,29 +216,29 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
                 key={tool.id}
                 onClick={() => setActiveTool(tool.id)}
                 className={cn(
-                  "relative flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-xl transition-all min-w-[56px] flex-shrink-0",
+                  "relative flex flex-col items-center justify-center gap-0.5 px-1 py-2 rounded-xl transition-all flex-1",
                   isActive 
                     ? "text-blue-600 dark:text-blue-400" 
                     : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                 )}
               >
                 {isActive && (
-                  <div className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 rounded-full" />
+                  <div className="absolute -top-px left-1/2 -translate-x-1/2 w-6 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 rounded-full" />
                 )}
                 
                 <div className={cn(
-                  "w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200",
+                  "w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200",
                   isActive 
-                    ? `bg-gradient-to-br ${tool.gradient} shadow-lg` 
+                    ? `bg-gradient-to-br ${tool.gradient} shadow-md` 
                     : "bg-gray-50 dark:bg-gray-800"
                 )}>
                   <Icon className={cn(
-                    "w-5 h-5 transition-colors",
+                    "w-4 h-4 transition-colors",
                     isActive ? "text-white" : "text-gray-400 dark:text-gray-500"
                   )} />
                 </div>
                 <span className={cn(
-                  "text-[10px] font-semibold transition-colors truncate max-w-[56px]",
+                  "text-[9px] font-semibold transition-colors truncate w-full text-center leading-tight",
                   isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"
                 )}>
                   {tool.name}
