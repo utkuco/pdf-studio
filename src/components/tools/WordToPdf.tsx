@@ -343,6 +343,7 @@ async function createPdfFromDocx(
       italicFont = regularFont;
       boldItalicFont = boldFont;
       console.log('Fonts embedded successfully');
+      console.log('Starting PDF rendering...');
       onProgress?.('Rendering content...');
     } else {
       console.log('Font fetch failed, using fallback');
@@ -588,7 +589,9 @@ async function createPdfFromDocx(
   }
 
   onProgress?.('Saving PDF...');
+  console.log('Saving PDF...');
   const pdfBytes = await pdfDoc.save();
+  console.log('PDF saved, size:', pdfBytes.length, 'bytes');
   return new Blob([pdfBytes], { type: 'application/pdf' });
 }
 
@@ -630,15 +633,20 @@ export function WordToPdf() {
       const blob = await createPdfFromDocx(
         arrayBuffer,
         file.name,
-        (status) => setProgress(status)
+        (status) => {
+          console.log('Progress:', status);
+          setProgress(status);
+        }
       );
       
+      console.log('PDF created, triggering download...');
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = `${file.name.replace(/\.docx$/i, '')}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
+      console.log('Download triggered!');
       
       setSuccess(true);
       setFile(null);
