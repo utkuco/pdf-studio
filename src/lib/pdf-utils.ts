@@ -1,15 +1,9 @@
 import { PDFDocument, degrees, StandardFonts, rgb } from 'pdf-lib';
-import * as pdfjsLib from 'pdfjs-dist';
 
-// Dynamic worker setup - will be configured by components that use it
-let workerInitialized = false;
+// pdfjs-dist v3.x with legacy build for Next.js compatibility
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 
-export async function ensureWorker() {
-  if (workerInitialized) return;
-  const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.mjs');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker.default;
-  workerInitialized = true;
-}
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
 export async function mergePdfs(files: File[]): Promise<Uint8Array> {
   const mergedPdf = await PDFDocument.create();
@@ -35,58 +29,57 @@ export async function imagesToPdf(files: File[]): Promise<Uint8Array> {
       continue;
     }
     const page = pdf.addPage([image.width, image.height]);
-    page.drawImage(image, {
-      x: 0, y: 0,
-      width: image.width, height: image.height,
-    });
+    page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
   }
   return await pdf.save();
 }
 
-export async function editPdfPages(file: File, actions: { type: 'delete' | 'rotate', pageIndex: number, rotation?: number }[]): Promise<Uint8Array> {
+export async function editPdfPages(
+  file: File,
+  actions: { type: 'delete' | 'rotate'; pageIndex: number; rotation?: number }[]
+): Promise<Uint8Array> {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await PDFDocument.load(arrayBuffer);
 
-  const rotations = actions.filter(a => a.type === 'rotate');
-  for (const action of rotations) {
+  for (const action of actions.filter((a) => a.type === 'rotate')) {
     const page = pdf.getPage(action.pageIndex);
     const currentRotation = page.getRotation().angle;
     page.setRotation(degrees(currentRotation + (action.rotation || 90)));
   }
 
-  const deletions = actions.filter(a => a.type === 'delete').map(a => a.pageIndex).sort((a, b) => b - a);
-  for (const pageIndex of deletions) {
+  for (const pageIndex of actions
+    .filter((a) => a.type === 'delete')
+    .map((a) => a.pageIndex)
+    .sort((a, b) => b - a)) {
     pdf.removePage(pageIndex);
   }
 
   return await pdf.save();
 }
 
-let cachedPdf: { file: File, pdf: any } | null = null;
+let cachedPdf: { file: File; pdf: any } | null = null;
 
 export async function getPdfDocument(file: File) {
-  if (cachedPdf && cachedPdf.file.name === file.name && cachedPdf.file.size === file.size && cachedPdf.file.lastModified === file.lastModified) {
+  if (
+    cachedPdf &&
+    cachedPdf.file.name === file.name &&
+    cachedPdf.file.size === file.size &&
+    cachedPdf.file.lastModified === file.lastModified
+  ) {
     return cachedPdf.pdf;
   }
 
-  await ensureWorker();
-
-  const url = URL.createObjectURL(file);
-  try {
-    const pdf = await pdfjsLib.getDocument(url).promise;
-    cachedPdf = { file, pdf };
-    return pdf;
-  } catch (error) {
-    console.warn("Failed to load PDF via URL, falling back to ArrayBuffer", error);
-    const arrayBuffer = await file.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
-    const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
-    cachedPdf = { file, pdf };
-    return pdf;
-  }
+  const arrayBuffer = await file.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
+  const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
+  cachedPdf = { file, pdf };
+  return pdf;
 }
 
-export async function renderPdfPagesToImages(file: File, scale: number = 2.0): Promise<string[]> {
+export async function renderPdfPagesToImages(
+  file: File,
+  scale: number = 2.0
+): Promise<string[]> {
   const pdf = await getPdfDocument(file);
   const images: string[] = [];
 
@@ -99,14 +92,18 @@ export async function renderPdfPagesToImages(file: File, scale: number = 2.0): P
 
     canvas.height = viewport.height;
     canvas.width = viewport.width;
-
-    await page.render({ canvasContext: context, viewport, canvas: canvas }).promise;
+    await page.render({ canvasContext: context, viewport }).promise;
     images.push(canvas.toDataURL('image/png'));
   }
+
   return images;
 }
 
-export async function renderPdfPageToImage(file: File, pageIndex: number, scale: number = 2.0): Promise<{ image: string, width: number, height: number }> {
+export async function renderPdfPageToImage(
+  file: File,
+  pageIndex: number,
+  scale: number = 2.0
+): Promise<{ image: string; width: number; height: number }> {
   const pdf = await getPdfDocument(file);
   const page = await pdf.getPage(pageIndex + 1);
   const viewport = page.getViewport({ scale });
@@ -116,16 +113,19 @@ export async function renderPdfPageToImage(file: File, pageIndex: number, scale:
 
   canvas.height = viewport.height;
   canvas.width = viewport.width;
+  await page.render({ canvasContext: context, viewport }).promise;
 
-  await page.render({ canvasContext: context, viewport, canvas: canvas }).promise;
   return {
     image: canvas.toDataURL('image/png'),
     width: viewport.width,
-    height: viewport.height
+    height: viewport.height,
   };
 }
 
-export async function applyAnnotationsToPdf(file: File, annotationsByPage: Record<number, any[]>): Promise<Uint8Array> {
+export async function applyAnnotationsToPdf(
+  file: File,
+  annotationsByPage: Record<number, any[]>
+): Promise<Uint8Array> {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await PDFDocument.load(arrayBuffer);
   const helveticaFont = await pdf.embedFont(StandardFonts.Helvetica);
@@ -141,13 +141,13 @@ export async function applyAnnotationsToPdf(file: File, annotationsByPage: Recor
     for (const ann of annotations) {
       if (ann.type === 'eraser') {
         const x = ann.nx * pdfWidth;
-        const y = pdfHeight - (ann.ny * pdfHeight) - (ann.nh * pdfHeight);
+        const y = pdfHeight - ann.ny * pdfHeight - ann.nh * pdfHeight;
         const width = ann.nw * pdfWidth;
         const height = ann.nh * pdfHeight;
         page.drawRectangle({ x, y, width, height, color: rgb(1, 1, 1) });
       } else if (ann.type === 'patch') {
         const x = ann.nx * pdfWidth;
-        const y = pdfHeight - (ann.ny * pdfHeight) - (ann.nh * pdfHeight);
+        const y = pdfHeight - ann.ny * pdfHeight - ann.nh * pdfHeight;
         const width = ann.nw * pdfWidth;
         const height = ann.nh * pdfHeight;
         try {
@@ -160,29 +160,39 @@ export async function applyAnnotationsToPdf(file: File, annotationsByPage: Recor
           const embeddedImage = await pdf.embedPng(bytes);
           page.drawImage(embeddedImage, { x, y, width, height });
         } catch (err) {
-          console.error("Error embedding patch image:", err);
+          console.error('Error embedding patch image:', err);
         }
       } else if (ann.type === 'text') {
         if (!ann.text) continue;
         const x = ann.nx * pdfWidth;
         const size = ann.fontSize;
-        const y = pdfHeight - (ann.ny * pdfHeight) - size;
+        const y = pdfHeight - ann.ny * pdfHeight - size;
         const maxWidth = ann.nw * pdfWidth;
         const hex = ann.color.replace('#', '');
         const r = parseInt(hex.substring(0, 2), 16) / 255;
         const g = parseInt(hex.substring(2, 4), 16) / 255;
         const b = parseInt(hex.substring(4, 6), 16) / 255;
         page.drawText(ann.text, {
-          x, y, size, font: helveticaFont,
-          color: rgb(r, g, b), maxWidth, lineHeight: size * 1.2,
+          x,
+          y,
+          size,
+          font: helveticaFont,
+          color: rgb(r, g, b),
+          maxWidth,
+          lineHeight: size * 1.2,
         });
       }
     }
   }
+
   return await pdf.save();
 }
 
-export function downloadFile(data: Uint8Array | Blob | string, filename: string, mimeType: string) {
+export function downloadFile(
+  data: Uint8Array | Blob | string,
+  filename: string,
+  mimeType: string
+) {
   let blob: Blob;
   if (typeof data === 'string') {
     const byteString = atob(data.split(',')[1]);
