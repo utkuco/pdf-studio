@@ -2,10 +2,18 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { FileEdit, ArrowRightLeft, Layers, FileText, Type, Home, Sparkles } from 'lucide-react';
+import { Home, Sparkles } from 'lucide-react';
+import { 
+  DocumentTextIcon, 
+  ArrowsRightLeftIcon, 
+  RectangleStackIcon, 
+  PencilIcon,
+  DocumentArrowDownIcon 
+} from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useState } from 'react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export type ToolType = 'annotate' | 'edit' | 'convert' | 'merge' | 'word-to-pdf';
 
@@ -15,50 +23,70 @@ interface SidebarProps {
 }
 
 const toolColors: Record<ToolType, { gradient: string; bg: string; text: string }> = {
-  'annotate': { gradient: 'from-blue-500 to-indigo-600', bg: 'bg-blue-100', text: 'text-blue-700' },
-  'edit': { gradient: 'from-indigo-500 to-purple-600', bg: 'bg-indigo-100', text: 'text-indigo-700' },
-  'convert': { gradient: 'from-emerald-500 to-teal-600', bg: 'bg-emerald-100', text: 'text-emerald-700' },
-  'merge': { gradient: 'from-orange-500 to-amber-600', bg: 'bg-orange-100', text: 'text-orange-700' },
-  'word-to-pdf': { gradient: 'from-purple-500 to-pink-600', bg: 'bg-purple-100', text: 'text-purple-700' },
+  'annotate': { gradient: 'from-blue-500 to-indigo-600', bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300' },
+  'edit': { gradient: 'from-indigo-500 to-purple-600', bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-700 dark:text-indigo-300' },
+  'convert': { gradient: 'from-emerald-500 to-teal-600', bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-300' },
+  'merge': { gradient: 'from-orange-500 to-amber-600', bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-300' },
+  'word-to-pdf': { gradient: 'from-purple-500 to-pink-600', bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-300' },
 };
+
+// Heroicons mapped to tool types
+const toolIcons: Record<ToolType, typeof PencilIcon> = {
+  'annotate': PencilIcon,
+  'edit': DocumentTextIcon,
+  'convert': ArrowsRightLeftIcon,
+  'merge': RectangleStackIcon,
+  'word-to-pdf': DocumentArrowDownIcon,
+};
+
+// Lucide fallback for home icon
+const HomeIcon = Home;
 
 export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
   const { t } = useLanguage();
   const [hoveredTool, setHoveredTool] = useState<ToolType | null>(null);
 
-  const tools: { id: ToolType; name: string; icon: typeof Type; description: string; gradient: string }[] = [
-    { id: 'annotate', name: t('annotate'), icon: Type, description: t('annotateDesc'), gradient: 'from-blue-500 to-indigo-600' },
-    { id: 'edit', name: t('editPages'), icon: FileEdit, description: t('editPagesDesc'), gradient: 'from-indigo-500 to-purple-600' },
-    { id: 'convert', name: t('convert'), icon: ArrowRightLeft, description: t('convertDesc'), gradient: 'from-emerald-500 to-teal-600' },
-    { id: 'merge', name: t('mergePdf'), icon: Layers, description: t('mergePdfDesc'), gradient: 'from-orange-500 to-amber-600' },
-    { id: 'word-to-pdf', name: t('wordToPdf'), icon: FileText, description: t('wordToPdfDesc'), gradient: 'from-purple-500 to-pink-600' },
+  const tools: { id: ToolType; name: string; description: string; gradient: string }[] = [
+    { id: 'annotate', name: t('annotate'), description: t('annotateDesc'), gradient: 'from-blue-500 to-indigo-600' },
+    { id: 'edit', name: t('editPages'), description: t('editPagesDesc'), gradient: 'from-indigo-500 to-purple-600' },
+    { id: 'convert', name: t('convert'), description: t('convertDesc'), gradient: 'from-emerald-500 to-teal-600' },
+    { id: 'merge', name: t('mergePdf'), description: t('mergePdfDesc'), gradient: 'from-orange-500 to-amber-600' },
+    { id: 'word-to-pdf', name: t('wordToPdf'), description: t('wordToPdfDesc'), gradient: 'from-purple-500 to-pink-600' },
   ];
 
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex w-72 bg-gradient-to-b from-gray-50 to-white border-r border-gray-200 h-screen flex-col shadow-sm">
+      <div className="hidden lg:flex w-72 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-950 border-r border-gray-200 dark:border-gray-800 h-screen flex-col shadow-sm transition-colors duration-300">
         {/* Header */}
-        <div className="p-6 flex items-center justify-between border-b border-gray-100">
+        <div className="p-6 flex items-center justify-between border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-2 rounded-xl shadow-lg shadow-blue-200">
-              <FileText className="w-6 h-6 text-white" />
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-2 rounded-xl shadow-lg shadow-blue-500/25 dark:shadow-blue-500/10">
+              <DocumentTextIcon className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 tracking-tight">PDF Studio</h1>
-              <p className="text-xs text-gray-500 font-medium">{t('secureFast')}</p>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">PDF Studio</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t('secureFast')}</p>
             </div>
           </div>
-          <Link href="/" className="p-2 rounded-xl hover:bg-gray-100 transition-all group" title={t('goHome')}>
-            <Home className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+          <Link href="/" className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all group" title={t('goHome')}>
+            <HomeIcon className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
           </Link>
+        </div>
+
+        {/* Theme Toggle */}
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Appearance</span>
+            <ThemeToggle />
+          </div>
         </div>
         
         {/* Tools */}
         <div className="p-4 flex-1 flex flex-col gap-2">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">Tools</div>
+          <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 px-3">Tools</div>
           {tools.map((tool) => {
-            const Icon = tool.icon;
+            const Icon = toolIcons[tool.id];
             const isActive = activeTool === tool.id;
             const isHovered = hoveredTool === tool.id;
             
@@ -71,8 +99,8 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
                 className={cn(
                   "relative flex items-center gap-3 w-full p-3 rounded-xl text-left transition-all duration-200 group overflow-hidden",
                   isActive 
-                    ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-sm border border-blue-100" 
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent"
+                    ? "bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 text-blue-700 dark:text-blue-300 shadow-sm border border-blue-100 dark:border-blue-800/50" 
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-200 border border-transparent"
                 )}
               >
                 {/* Active gradient indicator */}
@@ -81,18 +109,18 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
                   isActive ? `bg-gradient-to-b ${tool.gradient}` : "bg-transparent"
                 )} />
                 
-                {/* Icon */}
+                {/* Icon - Heroicons */}
                 <div className={cn(
                   "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300",
                   isActive 
-                    ? `bg-gradient-to-br ${tool.gradient} shadow-lg shadow-blue-200` 
+                    ? `bg-gradient-to-br ${tool.gradient} shadow-lg` 
                     : isHovered
-                      ? "bg-gray-100"
-                      : "bg-gray-50 group-hover:bg-gray-100"
+                      ? "bg-gray-100 dark:bg-gray-800"
+                      : "bg-gray-50 dark:bg-gray-800/50 group-hover:bg-gray-100 dark:group-hover:bg-gray-800"
                 )}>
                   <Icon className={cn(
                     "w-5 h-5 transition-colors",
-                    isActive ? "text-white" : "text-gray-500 group-hover:text-gray-700"
+                    isActive ? "text-white" : "text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200"
                   )} />
                 </div>
                 
@@ -100,24 +128,24 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
                 <div className="flex-1 min-w-0">
                   <div className={cn(
                     "font-semibold text-sm transition-colors",
-                    isActive ? toolColors[tool.id].text : "text-gray-700"
+                    isActive ? toolColors[tool.id].text : "text-gray-700 dark:text-gray-200"
                   )}>
                     {tool.name}
                   </div>
                   <div className={cn(
                     "text-xs mt-0.5 transition-colors truncate",
-                    isActive ? "text-gray-500" : "text-gray-400"
+                    isActive ? "text-gray-500 dark:text-gray-400" : "text-gray-400 dark:text-gray-500"
                   )}>
                     {tool.description}
                   </div>
                 </div>
                 
-                {/* Hover arrow */}
+                {/* Hover sparkle */}
                 <div className={cn(
-                  "w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center transition-all duration-300",
+                  "w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center transition-all duration-300",
                   isHovered && !isActive ? "opacity-100 scale-100" : "opacity-0 scale-50"
                 )}>
-                  <Sparkles className="w-3 h-3 text-gray-400" />
+                  <Sparkles className="w-3 h-3 text-gray-400 dark:text-gray-500" />
                 </div>
               </button>
             );
@@ -125,9 +153,9 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
         </div>
         
         {/* Footer */}
-        <div className="p-6 border-t border-gray-100">
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-            <p className="text-xs text-blue-700 font-medium text-center">
+        <div className="p-6 border-t border-gray-100 dark:border-gray-800">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-100 dark:border-blue-800/50">
+            <p className="text-xs text-blue-700 dark:text-blue-300 font-medium text-center">
               🔒 Your files never leave your device
             </p>
           </div>
@@ -135,10 +163,10 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
       </div>
 
       {/* Mobile Bottom Tab Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-gray-200 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] transition-colors duration-300">
         <div className="flex items-center justify-around h-16 px-2">
           {tools.map((tool) => {
-            const Icon = tool.icon;
+            const Icon = toolIcons[tool.id];
             const isActive = activeTool === tool.id;
             
             return (
@@ -148,29 +176,29 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
                 className={cn(
                   "relative flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[60px]",
                   isActive 
-                    ? "text-blue-600" 
-                    : "text-gray-400 hover:text-gray-600"
+                    ? "text-blue-600 dark:text-blue-400" 
+                    : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                 )}
               >
                 {/* Active indicator */}
                 {isActive && (
-                  <div className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full" />
+                  <div className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 rounded-full" />
                 )}
                 
                 <div className={cn(
                   "w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200",
                   isActive 
                     ? `bg-gradient-to-br ${tool.gradient} shadow-lg` 
-                    : "bg-gray-50"
+                    : "bg-gray-50 dark:bg-gray-800"
                 )}>
                   <Icon className={cn(
                     "w-5 h-5 transition-colors",
-                    isActive ? "text-white" : "text-gray-400"
+                    isActive ? "text-white" : "text-gray-400 dark:text-gray-500"
                   )} />
                 </div>
                 <span className={cn(
                   "text-[10px] font-semibold transition-colors",
-                  isActive ? "text-blue-600" : "text-gray-400"
+                  isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"
                 )}>
                   {tool.name}
                 </span>
@@ -181,17 +209,20 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
       </div>
 
       {/* Mobile Top Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-100">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 transition-colors duration-300">
         <div className="flex items-center justify-between h-14 px-4">
           <div className="flex items-center gap-2">
             <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-1.5 rounded-lg shadow-sm">
-              <FileText className="w-4 h-4 text-white" />
+              <DocumentTextIcon className="w-4 h-4 text-white" />
             </div>
-            <span className="text-base font-bold text-gray-900">PDF Studio</span>
+            <span className="text-base font-bold text-gray-900 dark:text-white">PDF Studio</span>
           </div>
-          <Link href="/" className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
-            <Home className="w-5 h-5 text-gray-500" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link href="/" className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <HomeIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            </Link>
+          </div>
         </div>
       </div>
     </>
