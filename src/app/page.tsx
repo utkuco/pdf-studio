@@ -11,7 +11,7 @@ import { ToolPreview } from '@/components/ToolPreview';
 
 type TranslationKey = keyof typeof translations.en;
 
-type ToolPreviewType = 'annotate' | 'edit' | 'convert' | 'merge' | 'word-to-pdf';
+type ToolPreviewType = 'annotate' | 'edit' | 'convert' | 'merge' | 'word-to-pdf' | 'security' | 'batch';
 
 export default function Home() {
   const { t } = useLanguage();
@@ -62,6 +62,24 @@ export default function Home() {
       gradient: 'from-purple-500 to-pink-600',
       features: ['Preserve formatting', 'Fast conversion', 'Secure processing'],
       toolType: 'word-to-pdf'
+    },
+    { 
+      key: 'security', 
+      descKey: 'securityDesc', 
+      icon: Shield, 
+      color: 'bg-red-500',
+      gradient: 'from-red-500 to-rose-600',
+      features: ['Password protect', 'AES-256 encryption', 'Secure processing'],
+      toolType: 'security'
+    },
+    { 
+      key: 'batch', 
+      descKey: 'batchDesc', 
+      icon: Layers, 
+      color: 'bg-cyan-500',
+      gradient: 'from-cyan-500 to-sky-600',
+      features: ['Process multiple files', 'Batch operations', 'Save time'],
+      toolType: 'batch'
     },
   ];
 

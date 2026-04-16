@@ -41,7 +41,7 @@ const translations = {
     heroDesc: 'Edit, annotate, merge, convert, and enhance PDF files directly in your browser. No uploads. No sign-up. No limits.',
     startEditing: "Start Editing — It's Free",
     allToolsTitle: 'All-in-One PDF Toolkit',
-    allToolsSubtitle: 'Five powerful tools, one simple interface.',
+    allToolsSubtitle: 'Seven powerful tools, one simple interface.',
     whyPdfStudio: 'Why PDF Studio?',
     privacy: '100% Private',
     privacyDesc: 'All processing happens in your browser. Files never leave your device.',

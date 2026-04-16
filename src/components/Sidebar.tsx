@@ -197,8 +197,8 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
 
       {/* Mobile Bottom Tab Bar */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] transition-colors duration-300">
-        <div className="flex items-center justify-around h-16 px-2">
-          {tools.slice(0, 5).map((tool) => {
+        <div className="flex items-center justify-around h-16 px-1 overflow-x-auto">
+          {tools.map((tool) => {
             const Icon = toolIcons[tool.id];
             const isActive = activeTool === tool.id;
             
@@ -207,7 +207,7 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
                 key={tool.id}
                 onClick={() => setActiveTool(tool.id)}
                 className={cn(
-                  "relative flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[60px]",
+                  "relative flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-xl transition-all min-w-[56px] flex-shrink-0",
                   isActive 
                     ? "text-blue-600 dark:text-blue-400" 
                     : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
@@ -229,7 +229,7 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
                   )} />
                 </div>
                 <span className={cn(
-                  "text-[10px] font-semibold transition-colors",
+                  "text-[10px] font-semibold transition-colors truncate max-w-[56px]",
                   isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"
                 )}>
                   {tool.name}

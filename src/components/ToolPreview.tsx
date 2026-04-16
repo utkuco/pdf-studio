@@ -7,7 +7,7 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import Link from 'next/link';
 
-type ToolType = 'annotate' | 'edit' | 'convert' | 'merge' | 'word-to-pdf';
+type ToolType = 'annotate' | 'edit' | 'convert' | 'merge' | 'word-to-pdf' | 'security' | 'batch';
 
 export function ToolPreview({ tool }: { tool: ToolType }) {
   const [isHovered, setIsHovered] = useState(false);
@@ -122,6 +122,64 @@ export function ToolPreview({ tool }: { tool: ToolType }) {
         <g transform="translate(150, 25)" opacity={isHovered ? "1" : "0.5"} className="transition-opacity duration-300">
           <circle cx="0" cy="0" r="15" fill="#dcfce7" />
           <path d="M-6 0 L-2 4 L6 -4" stroke="#22c55e" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+      </svg>
+    ),
+    security: (
+      <svg viewBox="0 0 200 150" className="w-full h-full">
+        {/* Lock body */}
+        <rect x="70" y="60" width="60" height="50" rx="8" fill="#fee2e2" stroke="#ef4444" strokeWidth="2" />
+        {/* Lock shackle */}
+        <path d="M80 60 L80 45 A20 20 0 0 1 120 45 L120 60" stroke="#ef4444" strokeWidth="4" fill="none" strokeLinecap="round" />
+        {/* Keyhole */}
+        <circle cx="100" cy="80" r="8" fill="#ef4444" />
+        <rect x="96" y="80" width="8" height="15" rx="2" fill="#ef4444" />
+        {/* Glow effect */}
+        <g opacity={isHovered ? "1" : "0.5"} className="transition-opacity duration-300">
+          <circle cx="100" cy="75" r="40" fill="none" stroke="#fef08a" strokeWidth="2" strokeDasharray="5,5" className="animate-pulse" />
+        </g>
+        {/* Shield icon */}
+        <g transform="translate(155, 25)">
+          <circle cx="0" cy="0" r="18" fill="#fef2f2" />
+          <path d="M-8 0 L0 -8 L8 0 L0 12 Z" fill="#ef4444" opacity={isHovered ? "1" : "0.6"} />
+        </g>
+      </svg>
+    ),
+    batch: (
+      <svg viewBox="0 0 200 150" className="w-full h-full">
+        {/* Document 1 */}
+        <rect x="20" y="35" width="45" height="55" rx="4" fill="white" stroke="#3b82f6" strokeWidth="2" />
+        <line x1="27" y1="45" x2="58" y2="45" stroke="#93c5fd" strokeWidth="2" strokeLinecap="round" />
+        <line x1="27" y1="53" x2="52" y2="53" stroke="#93c5fd" strokeWidth="2" strokeLinecap="round" />
+        {/* Document 2 */}
+        <rect x="40" y="25" width="45" height="55" rx="4" fill="white" stroke="#8b5cf6" strokeWidth="2" />
+        <line x1="47" y1="35" x2="78" y2="35" stroke="#c4b5fd" strokeWidth="2" strokeLinecap="round" />
+        <line x1="47" y1="43" x2="72" y2="43" stroke="#c4b5fd" strokeWidth="2" strokeLinecap="round" />
+        {/* Document 3 */}
+        <rect x="60" y="15" width="45" height="55" rx="4" fill="white" stroke="#10b981" strokeWidth="2" />
+        <line x1="67" y1="25" x2="98" y2="25" stroke="#6ee7b7" strokeWidth="2" strokeLinecap="round" />
+        <line x1="67" y1="33" x2="92" y2="33" stroke="#6ee7b7" strokeWidth="2" strokeLinecap="round" />
+        {/* Progress arrows */}
+        <g opacity={isHovered ? "1" : "0.5"} className="transition-opacity duration-300">
+          <path d="M120 40 L145 40" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" />
+          <path d="M138 34 L148 40 L138 46" stroke="#f59e0b" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M120 60 L145 60" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" />
+          <path d="M138 54 L148 60 L138 66" stroke="#f59e0b" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M120 80 L145 80" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" />
+          <path d="M138 74 L148 80 L138 86" stroke="#f59e0b" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+        {/* Checkmarks */}
+        <g transform="translate(160, 40)">
+          <circle cx="0" cy="0" r="12" fill="#dcfce7" />
+          <path d="M-5 0 L-2 3 L5 -4" stroke="#22c55e" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+        <g transform="translate(160, 60)">
+          <circle cx="0" cy="0" r="12" fill="#dcfce7" />
+          <path d="M-5 0 L-2 3 L5 -4" stroke="#22c55e" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+        <g transform="translate(160, 80)">
+          <circle cx="0" cy="0" r="12" fill="#dcfce7" />
+          <path d="M-5 0 L-2 3 L5 -4" stroke="#22c55e" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
         </g>
       </svg>
     ),
