@@ -307,31 +307,47 @@ async function createPdfFromDocx(
     
     // Fetch Roboto fonts from Google Fonts (v51, correct URLs)
     // Regular (400) and Bold (700) - extracted from Google Fonts CSS API
+    console.log('Fetching Roboto Regular from Google Fonts...');
     const regResp = await fetch(
       'https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbWmT.ttf',
       { signal: AbortSignal.timeout(10000) }
     );
+    console.log('Roboto Regular fetch status:', regResp.status, 'OK:', regResp.ok);
+    
     // Roboto Bold (700)
+    console.log('Fetching Roboto Bold from Google Fonts...');
     const boldResp = await fetch(
       'https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuYjammT.ttf',
       { signal: AbortSignal.timeout(10000) }
     );
+    console.log('Roboto Bold fetch status:', boldResp.status, 'OK:', boldResp.ok);
+    
     // Roboto Italic - use Regular (no true italic available in basic package)
     const italResp = regResp.clone();
     // Roboto Bold Italic - use Bold
     const boldItResp = boldResp.clone();
 
     if (regResp.ok && boldResp.ok) {
-      regularFont = await pdfDoc.embedFont(await regResp.arrayBuffer());
-      boldFont = await pdfDoc.embedFont(await boldResp.arrayBuffer());
-      italicFont = await pdfDoc.embedFont(await italResp.arrayBuffer());
-      boldItalicFont = await pdfDoc.embedFont(await boldItResp.arrayBuffer());
+      console.log('Embedding fonts...');
+      const regBytes = await regResp.arrayBuffer();
+      const boldBytes = await boldResp.arrayBuffer();
+      console.log('Regular font bytes:', regBytes.byteLength);
+      console.log('Bold font bytes:', boldBytes.byteLength);
+      
+      regularFont = await pdfDoc.embedFont(regBytes);
+      boldFont = await pdfDoc.embedFont(boldBytes);
+      italicFont = regularFont;
+      boldItalicFont = boldFont;
+      console.log('Fonts embedded successfully');
       onProgress?.('Rendering content...');
     } else {
+      console.log('Font fetch failed, using fallback');
       throw new Error('Font load failed');
     }
-  } catch (e) {
+  } catch (e: any) {
+    console.error('Font loading error:', e?.message || e);
     // Fallback to built-in fonts (no Turkish support)
+    console.log('Using Helvetica fallback (no Turkish support)');
     regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
     boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     italicFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
