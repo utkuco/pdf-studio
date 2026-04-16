@@ -3,7 +3,11 @@ import { PDFDocument, degrees, StandardFonts, rgb } from 'pdf-lib';
 // pdfjs-dist v3.x with legacy build for Next.js compatibility
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+// Set workerSrc - use string path directly
+pdfjsLib.GlobalWorkerOptions.workerSrc = 
+  typeof window !== 'undefined' 
+    ? new URL('/pdf.worker.min.js', window.location.origin).href 
+    : '/pdf.worker.min.js';
 
 export async function mergePdfs(files: File[]): Promise<Uint8Array> {
   const mergedPdf = await PDFDocument.create();
