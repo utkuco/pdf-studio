@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar, ToolType } from '@/components/Sidebar';
 import { PdfAnnotator } from '@/components/tools/PdfAnnotator';
 import { PdfEditor } from '@/components/tools/PdfEditor';
@@ -9,9 +9,24 @@ import { PdfMerger } from '@/components/tools/PdfMerger';
 import { WordToPdf } from '@/components/tools/WordToPdf';
 import { SecurityTool } from '@/components/tools/SecurityTool';
 import { BatchProcessor } from '@/components/tools/BatchProcessor';
+import { useSearchParams } from 'next/navigation';
 
 export default function EditorClient() {
-  const [activeTool, setActiveTool] = useState<ToolType>('annotate');
+  const searchParams = useSearchParams();
+  const toolParam = searchParams.get('tool');
+  
+  // Initialize from URL param, validate it
+  const validTools: ToolType[] = ['annotate', 'edit', 'convert', 'merge', 'word-to-pdf', 'security', 'batch'];
+  const initialTool: ToolType = validTools.includes(toolParam as ToolType) ? (toolParam as ToolType) : 'annotate';
+  
+  const [activeTool, setActiveTool] = useState<ToolType>(initialTool);
+
+  // Update URL when tool changes
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('tool', activeTool);
+    window.history.replaceState({}, '', url.toString());
+  }, [activeTool]);
 
   return (
     <div className="flex h-screen bg-white overflow-hidden font-sans">
