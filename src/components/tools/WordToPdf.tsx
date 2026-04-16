@@ -305,26 +305,21 @@ async function createPdfFromDocx(
   try {
     onProgress?.('Loading fonts...');
     
-    // Roboto Regular
+    // Fetch Roboto fonts from Google Fonts (v51, correct URLs)
+    // Regular (400) and Bold (700) - extracted from Google Fonts CSS API
     const regResp = await fetch(
-      'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Me5Q.ttf',
-      { signal: AbortSignal.timeout(8000) }
+      'https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbWmT.ttf',
+      { signal: AbortSignal.timeout(10000) }
     );
-    // Roboto Bold
+    // Roboto Bold (700)
     const boldResp = await fetch(
-      'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmEU9Vdw.ttf',
-      { signal: AbortSignal.timeout(8000) }
+      'https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuYjammT.ttf',
+      { signal: AbortSignal.timeout(10000) }
     );
-    // Roboto Italic
-    const italResp = await fetch(
-      'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1Me5Q.ttf',
-      { signal: AbortSignal.timeout(8000) }
-    );
-    // Roboto Bold Italic
-    const boldItResp = await fetch(
-      'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1Me5Q.ttf',
-      { signal: AbortSignal.timeout(8000) }
-    );
+    // Roboto Italic - use Regular (no true italic available in basic package)
+    const italResp = regResp.clone();
+    // Roboto Bold Italic - use Bold
+    const boldItResp = boldResp.clone();
 
     if (regResp.ok && boldResp.ok) {
       regularFont = await pdfDoc.embedFont(await regResp.arrayBuffer());
@@ -335,7 +330,7 @@ async function createPdfFromDocx(
     } else {
       throw new Error('Font load failed');
     }
-  } catch {
+  } catch (e) {
     // Fallback to built-in fonts (no Turkish support)
     regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
     boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
