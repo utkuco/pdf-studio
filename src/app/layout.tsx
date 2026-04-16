@@ -11,6 +11,11 @@ export const metadata: Metadata = {
   description: 'Edit, annotate, merge, convert and enhance PDF files directly in your browser. No uploads, no sign-up, no limits. 100% private and free.',
   keywords: ['PDF editor', 'PDF merger', 'PDF converter', 'annotate PDF', 'edit PDF online', 'Word to PDF', 'PDF to image', 'free PDF tools', 'online PDF editor', 'browser PDF editor'],
   authors: [{ name: 'PDF Studio' }],
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/icon-192.svg',
+  },
   openGraph: {
     title: 'PDF Studio — Free Online PDF Editor',
     description: 'Edit, annotate, merge, convert and enhance PDF files directly in your browser. No uploads, no sign-up.',

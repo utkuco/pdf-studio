@@ -283,9 +283,18 @@ export default function Home() {
       <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-1.5 sm:p-2 rounded-xl shadow-lg shadow-blue-500/25 dark:shadow-blue-500/10">
-              <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </div>
+            <svg viewBox="0 0 32 32" className="w-8 h-8 sm:w-9 sm:h-9">
+              <defs>
+                <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#2563EB"/>
+                  <stop offset="100%" stopColor="#4F46E5"/>
+                </linearGradient>
+              </defs>
+              <rect x="1" y="1" width="30" height="30" rx="6" fill="url(#logoGrad)"/>
+              <rect x="5" y="4" width="22" height="24" rx="2" fill="white"/>
+              <path d="M19 4 L27 12 L19 12 Z" fill="#E5E7EB"/>
+              <text x="7" y="20" fontFamily="Arial" fontSize="9" fontWeight="bold" fill="#2563EB">PDF</text>
+            </svg>
             <span className="text-base sm:text-xl font-bold text-gray-900 dark:text-white tracking-tight">PDF Studio</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
@@ -616,9 +625,18 @@ export default function Home() {
       <footer className="py-8 sm:py-10 px-4 sm:px-6 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 transition-colors duration-300">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-2">
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-1.5 rounded-lg">
-              <FileText className="w-4 h-4 text-white" />
-            </div>
+            <svg viewBox="0 0 32 32" className="w-6 h-6">
+              <defs>
+                <linearGradient id="logoGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#2563EB"/>
+                  <stop offset="100%" stopColor="#4F46E5"/>
+                </linearGradient>
+              </defs>
+              <rect x="1" y="1" width="30" height="30" rx="6" fill="url(#logoGrad2)"/>
+              <rect x="5" y="4" width="22" height="24" rx="2" fill="white"/>
+              <path d="M19 4 L27 12 L19 12 Z" fill="#E5E7EB"/>
+              <text x="7" y="20" fontFamily="Arial" fontSize="9" fontWeight="bold" fill="#2563EB">PDF</text>
+            </svg>
             <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">PDF Studio</span>
           </div>
           <p className="text-xs sm:text-sm text-gray-400">© {new Date().getFullYear()} PDF Studio. {t('footerNote')}</p>

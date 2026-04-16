@@ -70,9 +70,18 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
         {/* Header */}
         <div className="p-6 flex items-center justify-between border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-2 rounded-xl shadow-lg shadow-blue-500/25 dark:shadow-blue-500/10">
-              <DocumentTextIcon className="w-6 h-6 text-white" />
-            </div>
+            <svg viewBox="0 0 32 32" className="w-10 h-10">
+              <defs>
+                <linearGradient id="sidebarLogoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#2563EB"/>
+                  <stop offset="100%" stopColor="#4F46E5"/>
+                </linearGradient>
+              </defs>
+              <rect x="1" y="1" width="30" height="30" rx="6" fill="url(#sidebarLogoGrad)"/>
+              <rect x="5" y="4" width="22" height="24" rx="2" fill="white"/>
+              <path d="M19 4 L27 12 L19 12 Z" fill="#E5E7EB"/>
+              <text x="7" y="20" fontFamily="Arial" fontSize="9" fontWeight="bold" fill="#2563EB">PDF</text>
+            </svg>
             <div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">PDF Studio</h1>
               <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t('secureFast')}</p>
