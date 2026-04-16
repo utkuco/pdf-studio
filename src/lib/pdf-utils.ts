@@ -133,7 +133,18 @@ export async function applyAnnotationsToPdf(
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await PDFDocument.load(arrayBuffer);
   const helveticaFont = await pdf.embedFont(StandardFonts.Helvetica);
+  const helveticaBold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const helveticaItalic = await pdf.embedFont(StandardFonts.HelveticaBoldOblique);
   const pages = pdf.getPages();
+
+  const hexToRgb = (hex: string) => {
+    const h = hex.replace('#', '');
+    return {
+      r: parseInt(h.substring(0, 2), 16) / 255,
+      g: parseInt(h.substring(2, 4), 16) / 255,
+      b: parseInt(h.substring(4, 6), 16) / 255,
+    };
+  };
 
   for (const [pageIndexStr, annotations] of Object.entries(annotationsByPage)) {
     const pageIndex = parseInt(pageIndexStr, 10);
@@ -143,17 +154,14 @@ export async function applyAnnotationsToPdf(
     const { width: pdfWidth, height: pdfHeight } = page.getSize();
 
     for (const ann of annotations) {
+      const x = ann.nx * pdfWidth;
+      const y = pdfHeight - ann.ny * pdfHeight - ann.nh * pdfHeight;
+      const w = ann.nw * pdfWidth;
+      const h = ann.nh * pdfHeight;
+
       if (ann.type === 'eraser') {
-        const x = ann.nx * pdfWidth;
-        const y = pdfHeight - ann.ny * pdfHeight - ann.nh * pdfHeight;
-        const width = ann.nw * pdfWidth;
-        const height = ann.nh * pdfHeight;
-        page.drawRectangle({ x, y, width, height, color: rgb(1, 1, 1) });
+        page.drawRectangle({ x, y, width: w, height: h, color: rgb(1, 1, 1) });
       } else if (ann.type === 'patch') {
-        const x = ann.nx * pdfWidth;
-        const y = pdfHeight - ann.ny * pdfHeight - ann.nh * pdfHeight;
-        const width = ann.nw * pdfWidth;
-        const height = ann.nh * pdfHeight;
         try {
           const base64Data = ann.imageData.split(',')[1];
           const binaryString = atob(base64Data);
@@ -162,28 +170,114 @@ export async function applyAnnotationsToPdf(
             bytes[i] = binaryString.charCodeAt(i);
           }
           const embeddedImage = await pdf.embedPng(bytes);
-          page.drawImage(embeddedImage, { x, y, width, height });
+          page.drawImage(embeddedImage, { x, y, width: w, height: h });
         } catch (err) {
           console.error('Error embedding patch image:', err);
         }
       } else if (ann.type === 'text') {
         if (!ann.text) continue;
-        const x = ann.nx * pdfWidth;
         const size = ann.fontSize;
-        const y = pdfHeight - ann.ny * pdfHeight - size;
-        const maxWidth = ann.nw * pdfWidth;
-        const hex = ann.color.replace('#', '');
-        const r = parseInt(hex.substring(0, 2), 16) / 255;
-        const g = parseInt(hex.substring(2, 4), 16) / 255;
-        const b = parseInt(hex.substring(4, 6), 16) / 255;
+        const textY = pdfHeight - ann.ny * pdfHeight - size;
+        const { r, g, b } = hexToRgb(ann.color);
+        const font = ann.bold ? helveticaBold : ann.italic ? helveticaItalic : helveticaFont;
+        
+        // Handle text alignment
+        let textX = x;
+        if (ann.align === 'center') textX = x + w / 2;
+        else if (ann.align === 'right') textX = x + w - w * 0.9;
+        
         page.drawText(ann.text, {
-          x,
-          y,
+          x: textX,
+          y: textY,
           size,
-          font: helveticaFont,
+          font,
           color: rgb(r, g, b),
-          maxWidth,
+          maxWidth: w * 0.9,
           lineHeight: size * 1.2,
+          opacity: ann.opacity || 1,
+        });
+        
+        if (ann.underline) {
+          page.drawLine({
+            start: { x: textX, y: textY - 2 },
+            end: { x: textX + w * 0.9, y: textY - 2 },
+            thickness: size / 12,
+            color: rgb(r, g, b),
+            opacity: ann.opacity || 1,
+          });
+        }
+      } else if (ann.type === 'rect') {
+        const { r, g, b } = hexToRgb(ann.strokeColor);
+        const { r: fr, g: fg, b: fb } = hexToRgb(ann.fillColor);
+        page.drawRectangle({
+          x, y, width: w, height: h,
+          borderColor: rgb(r, g, b),
+          borderWidth: ann.strokeWidth,
+          color: ann.fillColor === '#FFFFFF' ? undefined : rgb(fr, fg, fb),
+          opacity: ann.opacity || 1,
+        });
+      } else if (ann.type === 'circle') {
+        const { r, g, b } = hexToRgb(ann.strokeColor);
+        const { r: fr, g: fg, b: fb } = hexToRgb(ann.fillColor);
+        page.drawEllipse({
+          x: x + w / 2, y: y + h / 2,
+          xScale: w / 2, yScale: h / 2,
+          borderColor: rgb(r, g, b),
+          borderWidth: ann.strokeWidth,
+          color: ann.fillColor === '#FFFFFF' ? undefined : rgb(fr, fg, fb),
+          opacity: ann.opacity || 1,
+        });
+      } else if (ann.type === 'line') {
+        const { r, g, b } = hexToRgb(ann.strokeColor);
+        page.drawLine({
+          start: { x, y: y + h },
+          end: { x: x + w, y },
+          thickness: ann.strokeWidth,
+          color: rgb(r, g, b),
+          opacity: ann.opacity || 1,
+        });
+      } else if (ann.type === 'arrow') {
+        const { r, g, b } = hexToRgb(ann.strokeColor);
+        const endX = x + w * 0.85;
+        const endY = y;
+        const headLen = Math.min(15, w * 0.15);
+        const angle = Math.atan2(-h, w);
+        
+        // Draw line
+        page.drawLine({
+          start: { x, y: y + h },
+          end: { x: endX, y: endY },
+          thickness: ann.strokeWidth,
+          color: rgb(r, g, b),
+          opacity: ann.opacity || 1,
+        });
+        
+        // Draw arrowhead
+        const ax1 = endX - headLen * Math.cos(angle - Math.PI / 6);
+        const ay1 = endY + headLen * Math.sin(angle - Math.PI / 6) + h;
+        const ax2 = endX - headLen * Math.cos(angle + Math.PI / 6);
+        const ay2 = endY + headLen * Math.sin(angle + Math.PI / 6) + h;
+        
+        page.drawLine({
+          start: { x: endX, y: endY },
+          end: { x: ax1, y: ay1 },
+          thickness: ann.strokeWidth,
+          color: rgb(r, g, b),
+          opacity: ann.opacity || 1,
+        });
+        page.drawLine({
+          start: { x: endX, y: endY },
+          end: { x: ax2, y: ay2 },
+          thickness: ann.strokeWidth,
+          color: rgb(r, g, b),
+          opacity: ann.opacity || 1,
+        });
+      } else if (ann.type === 'highlight') {
+        const { r, g, b } = hexToRgb(ann.color);
+        page.drawRectangle({
+          x, y, width: w, height: h,
+          color: rgb(r, g, b),
+          opacity: ann.opacity || 0.4,
         });
       }
     }
