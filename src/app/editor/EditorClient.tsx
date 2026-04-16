@@ -6,7 +6,6 @@ import { PdfAnnotator } from '@/components/tools/PdfAnnotator';
 import { PdfEditor } from '@/components/tools/PdfEditor';
 import { FormatConverter } from '@/components/tools/FormatConverter';
 import { PdfMerger } from '@/components/tools/PdfMerger';
-import { ResolutionEnhancer } from '@/components/tools/ResolutionEnhancer';
 import { WordToPdf } from '@/components/tools/WordToPdf';
 
 export default function EditorClient() {
@@ -21,7 +20,6 @@ export default function EditorClient() {
           {activeTool === 'edit' && <PdfEditor />}
           {activeTool === 'convert' && <FormatConverter />}
           {activeTool === 'merge' && <PdfMerger />}
-          {activeTool === 'enhance' && <ResolutionEnhancer />}
           {activeTool === 'word-to-pdf' && <WordToPdf />}
         </div>
       </main>

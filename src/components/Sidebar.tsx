@@ -1,10 +1,12 @@
 'use client';
 
 import React from 'react';
-import { FileEdit, ArrowRightLeft, Layers, FileText, Type, Sparkles } from 'lucide-react';
+import Link from 'next/link';
+import { FileEdit, ArrowRightLeft, Layers, FileText, Type, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
-export type ToolType = 'annotate' | 'edit' | 'convert' | 'merge' | 'enhance' | 'word-to-pdf';
+export type ToolType = 'annotate' | 'edit' | 'convert' | 'merge' | 'word-to-pdf';
 
 interface SidebarProps {
   activeTool: ToolType;
@@ -12,25 +14,30 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
+  const { t } = useLanguage();
   const tools = [
-    { id: 'annotate', name: 'Annotate', icon: Type, description: 'Add text, erase' },
-    { id: 'edit', name: 'Edit Pages', icon: FileEdit, description: 'Delete, rotate pages' },
-    { id: 'convert', name: 'Convert', icon: ArrowRightLeft, description: 'PDF ↔ Image' },
-    { id: 'merge', name: 'Merge PDF', icon: Layers, description: 'Combine files' },
-    { id: 'word-to-pdf', name: 'Word → PDF', icon: FileText, description: 'Convert DOCX' },
-    { id: 'enhance', name: 'Enhance', icon: Sparkles, description: 'AI upscale' },
+    { id: 'annotate', name: t('annotate'), icon: Type, description: t('annotateDesc') },
+    { id: 'edit', name: t('editPages'), icon: FileEdit, description: t('editPagesDesc') },
+    { id: 'convert', name: t('convert'), icon: ArrowRightLeft, description: t('convertDesc') },
+    { id: 'merge', name: t('mergePdf'), icon: Layers, description: t('mergePdfDesc') },
+    { id: 'word-to-pdf', name: t('wordToPdf'), icon: FileText, description: t('wordToPdfDesc') },
   ] as const;
 
   return (
     <div className="w-72 bg-gray-50 border-r border-gray-200 h-screen flex flex-col">
-      <div className="p-6 flex items-center gap-3 border-b border-gray-200">
-        <div className="bg-blue-600 p-2 rounded-lg">
-          <FileText className="w-6 h-6 text-white" />
+      <div className="p-6 flex items-center justify-between border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-600 p-2 rounded-lg">
+            <FileText className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">PDF Studio</h1>
+            <p className="text-xs text-gray-500 font-medium">{t('secureFast')}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight">PDF Studio</h1>
-          <p className="text-xs text-gray-500 font-medium">Secure & Fast Tools</p>
-        </div>
+        <Link href="/" className="p-2 rounded-lg hover:bg-gray-200 transition-colors" title={t('goHome')}>
+          <Home className="w-5 h-5 text-gray-500" />
+        </Link>
       </div>
       
       <div className="p-4 flex-1 flex flex-col gap-2">
@@ -63,7 +70,7 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
       
       <div className="p-6 border-t border-gray-200">
         <p className="text-xs text-gray-400 text-center">
-          All processing happens in your browser. Files are never uploaded.
+          {t('privacyNote')}
         </p>
       </div>
     </div>
