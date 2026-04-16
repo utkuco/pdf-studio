@@ -1,14 +1,24 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { FileText, Download, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import mammoth from 'mammoth';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
-function htmlToPlainText(html: string): string {
-  // Strip HTML tags but preserve basic structure
+// Turkish character replacements for StandardFonts fallback
+const TURKISH_MAP: Record<string, string> = {
+  'İ': 'I', 'ı': 'i',
+  'Ş': 'S', 'ş': 's',
+  'Ğ': 'G', 'ğ': 'g',
+  'Ü': 'U', 'ü': 'u',
+  'Ö': 'O', 'ö': 'o',
+  'Ç': 'C', 'ç': 'c',
+  '€': 'EUR', '£': 'GBP', '¥': 'JPY', '₺': 'TL',
+};
+
+function stripHtml(html: string): string {
   return html
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n\n')
@@ -20,13 +30,42 @@ function htmlToPlainText(html: string): string {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&[a-z]+;/gi, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
-function getTextFromHtml(html: string): string[] {
-  const plain = htmlToPlainText(html);
-  return plain.split('\n').filter(line => line.trim().length > 0);
+function getLines(html: string): string[] {
+  return stripHtml(html).split('\n').filter(line => line.trim().length > 0);
+}
+
+// Replace Turkish chars with ASCII for StandardFonts
+function normalizeTurkish(text: string): string {
+  let result = text;
+  for (const [turkish, ascii] of Object.entries(TURKISH_MAP)) {
+    result = result.replace(new RegExp(turkish, 'g'), ascii);
+  }
+  return result;
+}
+
+// Load a font from Google Fonts that supports Turkish
+async function loadTurkishFont(): Promise<any | null> {
+  try {
+    // Roboto supports Turkish
+    const response = await fetch(
+      'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Me5Q.ttf',
+      { signal: AbortSignal.timeout(5000) }
+    );
+    if (!response.ok) return null;
+    const fontBytes = await response.arrayBuffer();
+    
+    // We'll load font dynamically in the browser
+    // But for now, return null to use fallback
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export function WordToPdf() {
@@ -60,15 +99,15 @@ export function WordToPdf() {
     try {
       // Step 1: Read DOCX and convert to HTML via mammoth
       const arrayBuffer = await file.arrayBuffer();
-      const result = await mammoth.convertToHtml({ arrayBuffer });
-      const html = result.value;
+      const mammothResult = await mammoth.convertToHtml({ arrayBuffer });
+      const html = mammothResult.value;
 
-      if (result.messages && result.messages.length > 0) {
-        console.warn('Mammoth warnings:', result.messages);
+      if (mammothResult.messages && mammothResult.messages.length > 0) {
+        console.warn('Mammoth warnings:', mammothResult.messages);
       }
 
-      // Step 2: Extract plain text lines from HTML
-      const lines = getTextFromHtml(html);
+      // Step 2: Extract plain text lines
+      const lines = getLines(html);
 
       if (lines.length === 0) {
         throw new Error('No text content found in the document.');
@@ -76,8 +115,41 @@ export function WordToPdf() {
 
       // Step 3: Create PDF with pdf-lib
       const pdfDoc = await PDFDocument.create();
-      const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      
+      // Try to load a Unicode-capable font
+      let font: any;
+      let boldFont: any;
+      
+      try {
+        // Try to load Roboto Bold from Google Fonts
+        const fontResponse = await fetch(
+          'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlvFw.ttf',
+          { signal: AbortSignal.timeout(5000) }
+        );
+        if (fontResponse.ok) {
+          const fontBytes = await fontResponse.arrayBuffer();
+          font = await pdfDoc.embedFont(fontBytes);
+          
+          const boldResponse = await fetch(
+            'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmEU9Vdw.ttf',
+            { signal: AbortSignal.timeout(5000) }
+          );
+          if (boldResponse.ok) {
+            const boldBytes = await boldResponse.arrayBuffer();
+            boldFont = await pdfDoc.embedFont(boldBytes);
+          } else {
+            boldFont = font;
+          }
+        } else {
+          throw new Error('Font load failed');
+        }
+      } catch {
+        // Fallback: use StandardFonts (with Turkish char replacement)
+        const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        font = helvetica;
+        boldFont = helveticaBold;
+      }
 
       // A4 dimensions in points
       const PAGE_WIDTH = 595.28;
@@ -90,62 +162,78 @@ export function WordToPdf() {
       let currentPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
       let y = PAGE_HEIGHT - MARGIN;
 
+      // Helper to draw text, handling both Unicode and StandardFonts
+      const drawText = (text: string, x: number, yPos: number, size: number, currentFont: any) => {
+        try {
+          currentPage.drawText(text, {
+            x,
+            y: yPos,
+            size,
+            font: currentFont,
+            color: { r: 0, g: 0, b: 0 } as any,
+          });
+        } catch (err: any) {
+          // If Unicode font fails, try with normalized text
+          if (err.message && err.message.includes('WinAnsi') || err.message.includes('encode')) {
+            const normalized = normalizeTurkish(text);
+            currentPage.drawText(normalized, {
+              x,
+              y: yPos,
+              size,
+              font: currentFont,
+              color: { r: 0, g: 0, b: 0 } as any,
+            });
+          }
+        }
+      };
+
       for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
+        const rawLine = lines[i];
         
-        // Check if this line is a heading (starts with # or is all uppercase short)
-        const isHeading = line.startsWith('#') || (line.length < 50 && line === line.toUpperCase() && /[A-Z]/.test(line));
+        // Check if this line is a heading
+        const isHeading = rawLine.startsWith('#') || 
+          (rawLine.length < 60 && rawLine === rawLine.toUpperCase() && /[A-Z]/.test(rawLine));
         
-        const font = isHeading ? helveticaBold : helvetica;
+        const currentFont = isHeading ? boldFont : font;
         const size = isHeading ? FONT_SIZE + 4 : FONT_SIZE;
         const lh = isHeading ? LINE_HEIGHT * 1.5 : LINE_HEIGHT;
 
-        // Check if line is bold (HTML bold tags)
-        const isBold = /<\/?(b|strong)>/i.test(line) || line.startsWith('#');
-
         // Word wrap long lines
-        const words = line.replace(/<[^>]+>/g, '').split(/\s+/);
+        const words = rawLine.split(/\s+/);
         let currentLine = '';
-        let lineFont = isBold ? helveticaBold : helvetica;
+        let usedFont = currentFont;
 
         for (const word of words) {
           const testLine = currentLine ? `${currentLine} ${word}` : word;
-          const testWidth = lineFont.widthOfTextAtSize(testLine, size);
+          
+          let testWidth: number;
+          try {
+            testWidth = usedFont.widthOfTextAtSize(testLine, size);
+          } catch {
+            // Fallback width estimation
+            testWidth = usedFont.widthOfTextAtSize(normalizeTurkish(testLine), size);
+          }
 
           if (testWidth > MAX_WIDTH && currentLine) {
-            // Draw current line
             if (y < MARGIN + lh) {
               currentPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
               y = PAGE_HEIGHT - MARGIN;
             }
-            currentPage.drawText(currentLine, {
-              x: MARGIN,
-              y: y,
-              size: size,
-              font: lineFont,
-              color: { r: 0, g: 0, b: 0 } as any,
-            });
+            drawText(currentLine, MARGIN, y, size, usedFont);
             y -= lh;
             currentLine = word;
-            lineFont = isBold ? helveticaBold : helvetica;
           } else {
             currentLine = testLine;
           }
         }
 
-        // Draw remaining text on the line
+        // Draw remaining text
         if (currentLine) {
           if (y < MARGIN + lh) {
             currentPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
             y = PAGE_HEIGHT - MARGIN;
           }
-          currentPage.drawText(currentLine, {
-            x: MARGIN,
-            y: y,
-            size: size,
-            font: lineFont,
-            color: { r: 0, g: 0, b: 0 } as any,
-          });
+          drawText(currentLine, MARGIN, y, size, usedFont);
           y -= lh;
         }
       }
