@@ -3,11 +3,12 @@ import { PDFDocument, degrees, StandardFonts, rgb } from 'pdf-lib';
 // pdfjs-dist v3.x with legacy build for Next.js compatibility
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 
-// Set workerSrc - use string path directly
+// Set workerSrc - use CDN URL for production compatibility
+// Using pdfjs-dist's CDN to avoid SSR and deployment issues
 pdfjsLib.GlobalWorkerOptions.workerSrc = 
-  typeof window !== 'undefined' 
-    ? new URL('/pdf.worker.min.js', window.location.origin).href 
-    : '/pdf.worker.min.js';
+  typeof window !== 'undefined' && window.location.origin
+    ? `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+    : 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 export async function mergePdfs(files: File[]): Promise<Uint8Array> {
   const mergedPdf = await PDFDocument.create();

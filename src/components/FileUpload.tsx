@@ -29,17 +29,39 @@ export function FileUpload({ onFilesSelected, accept, multiple = true, className
     <div
       {...getRootProps()}
       className={cn(
-        "border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-colors duration-200 flex flex-col items-center justify-center min-h-[240px]",
-        isDragActive ? "border-blue-500 bg-blue-50/50" : "border-gray-300 hover:border-gray-400 bg-gray-50/50 hover:bg-gray-100/50",
+        "border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-300 flex flex-col items-center justify-center min-h-[200px] sm:min-h-[240px]",
+        isDragActive 
+          ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 shadow-lg shadow-blue-500/20 scale-[1.02]" 
+          : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 bg-gray-50/50 dark:bg-gray-800/50 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 hover:scale-[1.01]",
         className
       )}
     >
       <input {...getInputProps()} />
-      <div className={cn("p-4 rounded-full mb-4", isDragActive ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-500")}>
-        <UploadCloud className="w-8 h-8" />
+      
+      {/* Upload Icon */}
+      <div className={cn(
+        "p-4 rounded-2xl mb-4 transition-all duration-300",
+        isDragActive 
+          ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 scale-110" 
+          : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 group-hover:bg-gray-200 dark:group-hover:bg-gray-600"
+      )}>
+        <UploadCloud className="w-10 h-10 sm:w-12 sm:h-12" />
       </div>
-      <p className="text-lg font-medium text-gray-700">{title}</p>
-      <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+      
+      {/* Title */}
+      <p className="text-lg sm:text-xl font-semibold text-gray-700 dark:text-gray-200 mb-1">
+        {title}
+      </p>
+      
+      {/* Subtitle */}
+      <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">
+        {subtitle}
+      </p>
+      
+      {/* File type hint */}
+      <p className="text-xs text-gray-400 dark:text-gray-500 mt-3 px-3 py-1.5 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+        PDF, Images, Word documents supported
+      </p>
     </div>
   );
 }

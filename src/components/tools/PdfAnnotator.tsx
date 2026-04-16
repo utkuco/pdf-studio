@@ -311,10 +311,10 @@ export function PdfAnnotator() {
 
   if (!file) {
     return (
-      <div className="max-w-3xl mx-auto mt-12">
+      <div className="max-w-3xl mx-auto mt-12 px-4">
         <div className="mb-8 text-center">
-          <h2 className="text-2xl font-semibold text-gray-900">Annotate PDF</h2>
-          <p className="text-gray-500 mt-2">Add text, shapes, highlights, and more to your PDF</p>
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Annotate PDF</h2>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">Add text, shapes, highlights, and more to your PDF</p>
         </div>
         <FileUpload onFilesSelected={handleFileSelect} accept={{ 'application/pdf': ['.pdf'] }} multiple={false} />
       </div>
@@ -334,17 +334,17 @@ export function PdfAnnotator() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-gray-200 shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <button onClick={() => setFile(null)} className="sm:hidden p-1.5 text-gray-500 hover:text-gray-700">
+          <button onClick={() => setFile(null)} className="sm:hidden p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <FileText className="w-5 h-5 text-blue-600 flex-shrink-0" />
-          <h2 className="text-base sm:text-xl font-semibold text-gray-900 truncate">{file.name}</h2>
+          <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+          <h2 className="text-base sm:text-xl font-semibold text-gray-900 dark:text-white truncate">{file.name}</h2>
         </div>
         <div className="flex gap-2 sm:gap-3">
           <button onClick={() => { setFile(null); setAnnotations({}); setHistory([]); setHistoryIndex(-1); }}
-            className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+            className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
           <button onClick={handleSave} disabled={processing}
             className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1 sm:gap-2">
             {processing ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" /> : <Download className="w-3 h-3 sm:w-4 sm:h-4" />} <span className="hidden sm:inline">Save</span>
@@ -356,94 +356,94 @@ export function PdfAnnotator() {
       <div className="flex flex-col gap-2 mb-3 sm:mb-4 shrink-0">
         
         {/* Main Toolbar Row - Tools */}
-        <div className="flex flex-wrap gap-1 sm:gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200 items-center">
+        <div className="flex flex-wrap gap-1 sm:gap-2 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-xl border border-gray-200 dark:border-gray-700 items-center">
           {/* Undo/Redo */}
           <div className="flex gap-1 shrink-0">
             <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)"
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", canUndo ? "text-gray-600 hover:bg-gray-200" : "text-gray-300 cursor-not-allowed")}>
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", canUndo ? "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" : "text-gray-300 dark:text-gray-600 cursor-not-allowed")}>
               <Undo2 className="w-4 h-4" />
             </button>
             <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)"
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", canRedo ? "text-gray-600 hover:bg-gray-200" : "text-gray-300 cursor-not-allowed")}>
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", canRedo ? "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" : "text-gray-300 dark:text-gray-600 cursor-not-allowed")}>
               <Redo2 className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="w-px h-6 bg-gray-300 hidden sm:block" />
+          <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 hidden sm:block" />
 
           {/* Main tools */}
           <div className="flex gap-0.5 sm:gap-1 shrink-0">
             <button onClick={() => { setActiveTool('select'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'select' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Select">
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'select' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Select">
               <MousePointer2 className="w-4 h-4" />
             </button>
             <button onClick={() => { setActiveTool('move-area'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'move-area' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Move Area">
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'move-area' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Move Area">
               <Move className="w-4 h-4" />
             </button>
             <button onClick={() => { setActiveTool('eraser'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'eraser' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Eraser">
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'eraser' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Eraser">
               <Eraser className="w-4 h-4" />
             </button>
             <button onClick={() => { setActiveTool('text'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'text' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Text">
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'text' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Text">
               <Type className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="w-px h-6 bg-gray-300 hidden sm:block" />
+          <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 hidden sm:block" />
 
           {/* Shape tools */}
           <div className="flex gap-0.5 sm:gap-1 shrink-0">
             <button onClick={() => { setActiveTool('rect'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'rect' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Rectangle">
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'rect' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Rectangle">
               <Square className="w-4 h-4" />
             </button>
             <button onClick={() => { setActiveTool('circle'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'circle' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Circle">
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'circle' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Circle">
               <Circle className="w-4 h-4" />
             </button>
             <button onClick={() => { setActiveTool('line'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'line' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Line">
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'line' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Line">
               <Minus className="w-4 h-4" />
             </button>
             <button onClick={() => { setActiveTool('arrow'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'arrow' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Arrow">
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'arrow' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Arrow">
               <ArrowRight className="w-4 h-4" />
             </button>
             <button onClick={() => { setActiveTool('highlight'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'highlight' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Highlight">
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'highlight' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Highlight">
               <Highlighter className="w-4 h-4" />
             </button>
           </div>
 
           {/* Zoom */}
           <div className="flex items-center gap-1 ml-auto shrink-0">
-            <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="p-1.5 rounded hover:bg-gray-200"><ZoomOut className="w-4 h-4" /></button>
-            <span className="text-xs font-mono w-10 sm:w-12 text-center">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-1.5 rounded hover:bg-gray-200"><ZoomIn className="w-4 h-4" /></button>
-            <button onClick={() => setZoom(1.0)} className="p-1.5 rounded hover:bg-gray-200 hidden sm:block"><Maximize className="w-4 h-4" /></button>
+            <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"><ZoomOut className="w-4 h-4" /></button>
+            <span className="text-xs font-mono w-10 sm:w-12 text-center text-gray-700 dark:text-gray-300">{Math.round(zoom * 100)}%</span>
+            <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"><ZoomIn className="w-4 h-4" /></button>
+            <button onClick={() => setZoom(1.0)} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hidden sm:block"><Maximize className="w-4 h-4" /></button>
           </div>
 
           {/* Page nav */}
           <div className="flex items-center gap-1 shrink-0">
             <button onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0 || loading}
-              className="p-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-50"><ChevronLeft className="w-4 h-4" /></button>
-            <span className="text-xs font-medium text-gray-700 min-w-[3rem] sm:min-w-[4rem] text-center">{currentPage + 1}/{numPages}</span>
+              className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 text-gray-600 dark:text-gray-300"><ChevronLeft className="w-4 h-4" /></button>
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[3rem] sm:min-w-[4rem] text-center">{currentPage + 1}/{numPages}</span>
             <button onClick={() => setCurrentPage(p => Math.min(numPages - 1, p + 1))} disabled={currentPage === numPages - 1 || loading}
-              className="p-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-50"><ChevronRight className="w-4 h-4" /></button>
+              className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 text-gray-600 dark:text-gray-300"><ChevronRight className="w-4 h-4" /></button>
           </div>
         </div>
 
         {/* Properties Row - Text */}
         {showTextProps && (
-          <div className="flex flex-wrap gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200 items-center">
+          <div className="flex flex-wrap gap-2 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-xl border border-gray-200 dark:border-gray-700 items-center">
             {/* Color picker */}
             <div className="flex items-center gap-1">
               <div className="flex gap-0.5">
                 {['#000000', '#FF0000', '#0000FF', '#00AA00', '#FF6600', '#9900FF'].map(color => (
                   <button key={color} onClick={() => { setTextColor(color); handlePropertyChange({ color }); }}
-                    className={cn("w-6 h-6 sm:w-5 sm:h-5 rounded-sm border border-gray-200 transition-transform hover:scale-110", textColor === color && "ring-2 ring-blue-500 ring-offset-1")}
+                    className={cn("w-6 h-6 sm:w-5 sm:h-5 rounded-sm border border-gray-200 dark:border-gray-600 transition-transform hover:scale-110", textColor === color && "ring-2 ring-blue-500 ring-offset-1")}
                     style={{ backgroundColor: color }} />
                 ))}
               </div>
@@ -503,11 +503,11 @@ export function PdfAnnotator() {
             </div>
             
             <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-500 hidden sm:inline">Fill</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Fill</span>
               <div className="flex gap-0.5">
                 {['#FFFFFF', '#FF0000', '#0000FF', '#FFFF00'].map(color => (
                   <button key={color} onClick={() => { setShapeFillColor(color); handlePropertyChange({ fillColor: color }); }}
-                    className={cn("w-6 h-6 sm:w-5 sm:h-5 rounded-sm border border-gray-200 transition-transform hover:scale-110", shapeFillColor === color && "ring-2 ring-blue-500 ring-offset-1")}
+                    className={cn("w-6 h-6 sm:w-5 sm:h-5 rounded-sm border border-gray-200 dark:border-gray-600 transition-transform hover:scale-110", shapeFillColor === color && "ring-2 ring-blue-500 ring-offset-1")}
                     style={{ backgroundColor: color }} />
                 ))}
               </div>
@@ -516,14 +516,14 @@ export function PdfAnnotator() {
             </div>
             
             <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-500">W</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">W</span>
               <input type="range" min="1" max="10" value={shapeStrokeWidth} onChange={(e) => { setShapeStrokeWidth(Number(e.target.value)); handlePropertyChange({ strokeWidth: Number(e.target.value) }); }}
                 className="w-12 sm:w-16" />
-              <span className="text-xs text-gray-600 w-4">{shapeStrokeWidth}</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400 w-4">{shapeStrokeWidth}</span>
             </div>
             
             <div className="flex items-center gap-1">
-              <Droplets className="w-3.5 h-3.5 text-gray-400" />
+              <Droplets className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
               <input type="range" min="0.1" max="1" step="0.1" value={shapeOpacity} onChange={(e) => { setShapeOpacity(Number(e.target.value)); handlePropertyChange({ opacity: Number(e.target.value) }); }}
                 className="w-12 sm:w-16" />
             </div>
@@ -532,13 +532,13 @@ export function PdfAnnotator() {
 
         {/* Properties Row - Line/Arrow */}
         {showLineProps && (
-          <div className="flex flex-wrap gap-2 sm:gap-3 bg-gray-50 p-2 rounded-xl border border-gray-200 items-center">
+          <div className="flex flex-wrap gap-2 sm:gap-3 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-xl border border-gray-200 dark:border-gray-700 items-center">
             <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-500 hidden sm:inline">Color</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Color</span>
               <div className="flex gap-0.5">
                 {['#000000', '#FF0000', '#0000FF', '#00AA00'].map(color => (
                   <button key={color} onClick={() => { setShapeStrokeColor(color); handlePropertyChange({ strokeColor: color }); }}
-                    className={cn("w-6 h-6 sm:w-5 sm:h-5 rounded-sm border border-gray-200 transition-transform hover:scale-110", shapeStrokeColor === color && "ring-2 ring-blue-500 ring-offset-1")}
+                    className={cn("w-6 h-6 sm:w-5 sm:h-5 rounded-sm border border-gray-200 dark:border-gray-600 transition-transform hover:scale-110", shapeStrokeColor === color && "ring-2 ring-blue-500 ring-offset-1")}
                     style={{ backgroundColor: color }} />
                 ))}
               </div>
@@ -547,14 +547,14 @@ export function PdfAnnotator() {
             </div>
             
             <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-500">W</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">W</span>
               <input type="range" min="1" max="10" value={shapeStrokeWidth} onChange={(e) => { setShapeStrokeWidth(Number(e.target.value)); handlePropertyChange({ strokeWidth: Number(e.target.value) }); }}
                 className="w-12 sm:w-16" />
-              <span className="text-xs text-gray-600 w-4">{shapeStrokeWidth}</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400 w-4">{shapeStrokeWidth}</span>
             </div>
             
             <div className="flex items-center gap-1">
-              <Droplets className="w-3.5 h-3.5 text-gray-400" />
+              <Droplets className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
               <input type="range" min="0.1" max="1" step="0.1" value={shapeOpacity} onChange={(e) => { setShapeOpacity(Number(e.target.value)); handlePropertyChange({ opacity: Number(e.target.value) }); }}
                 className="w-12 sm:w-16" />
             </div>
@@ -563,13 +563,13 @@ export function PdfAnnotator() {
 
         {/* Properties Row - Highlight */}
         {showHighlightProps && (
-          <div className="flex flex-wrap gap-2 sm:gap-3 bg-gray-50 p-2 rounded-xl border border-gray-200 items-center">
+          <div className="flex flex-wrap gap-2 sm:gap-3 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-xl border border-gray-200 dark:border-gray-700 items-center">
             <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-500 hidden sm:inline">Color</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Color</span>
               <div className="flex gap-0.5">
                 {['#FFFF00', '#00FF00', '#FF6600', '#FF00FF'].map(color => (
                   <button key={color} onClick={() => { setHighlightColor(color); handlePropertyChange({ color }); }}
-                    className={cn("w-6 h-6 sm:w-5 sm:h-5 rounded-sm border border-gray-200 transition-transform hover:scale-110", highlightColor === color && "ring-2 ring-blue-500 ring-offset-1")}
+                    className={cn("w-6 h-6 sm:w-5 sm:h-5 rounded-sm border border-gray-200 dark:border-gray-600 transition-transform hover:scale-110", highlightColor === color && "ring-2 ring-blue-500 ring-offset-1")}
                     style={{ backgroundColor: color }} />
                 ))}
               </div>
@@ -578,23 +578,23 @@ export function PdfAnnotator() {
             </div>
             
             <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-500">Opacity</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">Opacity</span>
               <input type="range" min="0.1" max="0.8" step="0.1" value={highlightOpacity} onChange={(e) => { setHighlightOpacity(Number(e.target.value)); handlePropertyChange({ opacity: Number(e.target.value) }); }}
                 className="w-12 sm:w-16" />
-              <span className="text-xs text-gray-600 w-6">{highlightOpacity}</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400 w-6">{highlightOpacity}</span>
             </div>
           </div>
         )}
       </div>
 
       {/* Canvas area */}
-      <div className="flex-1 overflow-auto bg-gray-100 rounded-xl border border-gray-200 flex justify-center p-4 lg:p-8 relative">
+      <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-center p-4 lg:p-8 relative">
         {loading || !pageData ? (
           <div className="flex flex-col items-center justify-center h-full">
-            <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-4" /><p className="text-gray-500">Loading page...</p>
+            <Loader2 className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-spin mb-4" /><p className="text-gray-500 dark:text-gray-400">Loading page...</p>
           </div>
         ) : (
-          <div className="relative shadow-2xl bg-white origin-top transition-transform duration-200" style={{ width: 'fit-content', height: 'fit-content', transform: `scale(${zoom})` }}>
+          <div className="relative shadow-2xl bg-white dark:bg-gray-800 origin-top transition-transform duration-200 rounded-lg overflow-hidden" style={{ width: 'fit-content', height: 'fit-content', transform: `scale(${zoom})` }}>
             <img src={pageData.image} alt={`Page ${currentPage + 1}`} className="max-w-full h-auto block select-none" draggable={false} />
             <div ref={overlayRef}
               className={cn("absolute inset-0 z-10",
