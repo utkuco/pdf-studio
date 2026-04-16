@@ -5,6 +5,7 @@ import { useDropzone } from 'react-dropzone';
 import { FileText, Download, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import mammoth from 'mammoth';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 // ─── HTML Parser & Styled Text ─────────────────────────────────────────────
@@ -298,6 +299,9 @@ async function createPdfFromDocx(
 
   // Step 3: Create PDF with pdf-lib
   const pdfDoc = await PDFDocument.create();
+  
+  // Register fontkit for custom font embedding
+  pdfDoc.registerFontkit(fontkit);
   
   // Load Roboto fonts from Google Fonts (supports Turkish and all Unicode)
   let regularFont: any, boldFont: any, italicFont: any, boldItalicFont: any;
