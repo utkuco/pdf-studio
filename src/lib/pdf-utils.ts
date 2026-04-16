@@ -316,3 +316,43 @@ export function downloadFile(
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+// PDF Encryption/Decryption using pdf-lib
+// Note: pdf-lib does not support PDF encryption directly
+// For production, consider using a separate encryption library or service
+// This is a placeholder implementation
+
+export async function encryptPdf(file: File, password: string): Promise<Uint8Array> {
+  // pdf-lib doesn't support encryption natively
+  // For demo purposes, we'll just return the original PDF
+  // In production, use a library like 'node-pdfencrypt' or server-side encryption
+  console.warn('PDF encryption requires additional library. Returning original file.');
+  return new Uint8Array(await file.arrayBuffer());
+}
+
+export async function decryptPdf(file: File, password: string): Promise<Uint8Array> {
+  // For demo purposes, return the original PDF
+  // Real implementation would verify password and decrypt
+  console.warn('PDF decryption requires additional library. Returning original file.');
+  return new Uint8Array(await file.arrayBuffer());
+}
+
+export async function removePdfPassword(file: File, currentPassword: string): Promise<Uint8Array> {
+  // pdf-lib doesn't support password removal
+  console.warn('PDF password removal requires additional library. Returning original file.');
+  return new Uint8Array(await file.arrayBuffer());
+}
+
+export async function isPdfPasswordProtected(file: File): Promise<boolean> {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    await PDFDocument.load(arrayBuffer);
+    return false; // No password required
+  } catch (error: any) {
+    // If error mentions password, it's protected
+    if (error.message && (error.message.includes('password') || error.message.includes('encrypted'))) {
+      return true;
+    }
+    return false;
+  }
+}

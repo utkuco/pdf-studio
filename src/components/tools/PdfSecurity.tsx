@@ -11,7 +11,7 @@ import { Tooltip } from '../Tooltip';
 
 type SecurityMode = 'encrypt' | 'decrypt' | 'remove-password';
 
-export function SecurityTool() {
+export function PdfSecurity() {
   const { addToast } = useToast();
   const [mode, setMode] = useState<SecurityMode>('encrypt');
   const [file, setFile] = useState<File | null>(null);
@@ -249,24 +249,6 @@ export function SecurityTool() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* Feature Cards */}
-      <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="p-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-          <div className="bg-green-100 dark:bg-green-900/40 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-            <Lock className="w-6 h-6 text-green-600 dark:text-green-400" />
-          </div>
-          <h4 className="font-bold text-gray-900 dark:text-white mb-2">Password Protection</h4>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Secure your PDFs with strong AES encryption</p>
-        </div>
-        <div className="p-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-          <div className="bg-blue-100 dark:bg-blue-900/40 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-            <Shield className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-          </div>
-          <h4 className="font-bold text-gray-900 dark:text-white mb-2">Secure Processing</h4>
-          <p className="text-sm text-gray-500 dark:text-gray-400">All processing happens locally in your browser</p>
-        </div>
       </div>
     </div>
   );
