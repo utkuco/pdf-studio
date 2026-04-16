@@ -170,20 +170,16 @@ export function WordToPdf() {
             y: yPos,
             size,
             font: currentFont,
-            color: { r: 0, g: 0, b: 0 } as any,
           });
         } catch (err: any) {
-          // If Unicode font fails, try with normalized text
-          if (err.message && err.message.includes('WinAnsi') || err.message.includes('encode')) {
-            const normalized = normalizeTurkish(text);
-            currentPage.drawText(normalized, {
-              x,
-              y: yPos,
-              size,
-              font: currentFont,
-              color: { r: 0, g: 0, b: 0 } as any,
-            });
-          }
+          // If font encoding fails (non-Latin chars), normalize and retry once
+          const normalized = normalizeTurkish(text);
+          currentPage.drawText(normalized, {
+            x,
+            y: yPos,
+            size,
+            font: currentFont,
+          });
         }
       };
 
