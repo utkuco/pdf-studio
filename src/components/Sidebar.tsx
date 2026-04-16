@@ -2,20 +2,24 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Home, Sparkles } from 'lucide-react';
+import { Home, Sparkles, Star, Shield, Clock } from 'lucide-react';
 import { 
   DocumentTextIcon, 
   ArrowsRightLeftIcon, 
   RectangleStackIcon, 
   PencilIcon,
-  DocumentArrowDownIcon 
+  DocumentArrowDownIcon,
+  LockClosedIcon,
+  ListBulletIcon
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useState } from 'react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { Favorites, ToolListWithStars } from '@/components/Favorites';
+import { RecentFiles } from '@/components/RecentFiles';
 
-export type ToolType = 'annotate' | 'edit' | 'convert' | 'merge' | 'word-to-pdf';
+export type ToolType = 'annotate' | 'edit' | 'convert' | 'merge' | 'word-to-pdf' | 'security' | 'batch';
 
 interface SidebarProps {
   activeTool: ToolType;
@@ -28,23 +32,26 @@ const toolColors: Record<ToolType, { gradient: string; bg: string; text: string 
   'convert': { gradient: 'from-emerald-500 to-teal-600', bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-300' },
   'merge': { gradient: 'from-orange-500 to-amber-600', bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-300' },
   'word-to-pdf': { gradient: 'from-purple-500 to-pink-600', bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-300' },
+  'security': { gradient: 'from-red-500 to-rose-600', bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300' },
+  'batch': { gradient: 'from-cyan-500 to-sky-600', bg: 'bg-cyan-100 dark:bg-cyan-900/30', text: 'text-cyan-700 dark:text-cyan-300' },
 };
 
-// Heroicons mapped to tool types
 const toolIcons: Record<ToolType, typeof PencilIcon> = {
   'annotate': PencilIcon,
   'edit': DocumentTextIcon,
   'convert': ArrowsRightLeftIcon,
   'merge': RectangleStackIcon,
   'word-to-pdf': DocumentArrowDownIcon,
+  'security': LockClosedIcon,
+  'batch': ListBulletIcon,
 };
 
-// Lucide fallback for home icon
 const HomeIcon = Home;
 
 export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
   const { t } = useLanguage();
   const [hoveredTool, setHoveredTool] = useState<ToolType | null>(null);
+  const [showFavorites, setShowFavorites] = useState(false);
 
   const tools: { id: ToolType; name: string; description: string; gradient: string }[] = [
     { id: 'annotate', name: t('annotate'), description: t('annotateDesc'), gradient: 'from-blue-500 to-indigo-600' },
@@ -52,6 +59,8 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
     { id: 'convert', name: t('convert'), description: t('convertDesc'), gradient: 'from-emerald-500 to-teal-600' },
     { id: 'merge', name: t('mergePdf'), description: t('mergePdfDesc'), gradient: 'from-orange-500 to-amber-600' },
     { id: 'word-to-pdf', name: t('wordToPdf'), description: t('wordToPdfDesc'), gradient: 'from-purple-500 to-pink-600' },
+    { id: 'security', name: t('security') || 'Security', description: t('securityDesc') || 'Password protect PDFs', gradient: 'from-red-500 to-rose-600' },
+    { id: 'batch', name: t('batch') || 'Batch', description: t('batchDesc') || 'Process multiple files', gradient: 'from-cyan-500 to-sky-600' },
   ];
 
   return (
@@ -82,8 +91,32 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
           </div>
         </div>
         
+        {/* Favorites Section */}
+        <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">Quick Access</span>
+            <button 
+              onClick={() => setShowFavorites(!showFavorites)}
+              className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title="Manage favorites"
+            >
+              <Star className={cn("w-4 h-4", showFavorites ? "text-amber-500 fill-amber-500" : "text-gray-400")} />
+            </button>
+          </div>
+          {showFavorites && (
+            <div className="mt-2">
+              <ToolListWithStars />
+            </div>
+          )}
+        </div>
+
+        {/* Recent Files */}
+        <div className="border-b border-gray-100 dark:border-gray-800">
+          <RecentFiles />
+        </div>
+        
         {/* Tools */}
-        <div className="p-4 flex-1 flex flex-col gap-2">
+        <div className="p-4 flex-1 flex flex-col gap-2 overflow-y-auto">
           <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 px-3">Tools</div>
           {tools.map((tool) => {
             const Icon = toolIcons[tool.id];
@@ -109,7 +142,7 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
                   isActive ? `bg-gradient-to-b ${tool.gradient}` : "bg-transparent"
                 )} />
                 
-                {/* Icon - Heroicons */}
+                {/* Icon */}
                 <div className={cn(
                   "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300",
                   isActive 
@@ -165,7 +198,7 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
       {/* Mobile Bottom Tab Bar */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] transition-colors duration-300">
         <div className="flex items-center justify-around h-16 px-2">
-          {tools.map((tool) => {
+          {tools.slice(0, 5).map((tool) => {
             const Icon = toolIcons[tool.id];
             const isActive = activeTool === tool.id;
             
@@ -180,7 +213,6 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
                     : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                 )}
               >
-                {/* Active indicator */}
                 {isActive && (
                   <div className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 rounded-full" />
                 )}

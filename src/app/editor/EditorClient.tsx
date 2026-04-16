@@ -7,6 +7,8 @@ import { PdfEditor } from '@/components/tools/PdfEditor';
 import { FormatConverter } from '@/components/tools/FormatConverter';
 import { PdfMerger } from '@/components/tools/PdfMerger';
 import { WordToPdf } from '@/components/tools/WordToPdf';
+import { SecurityTool } from '@/components/tools/SecurityTool';
+import { BatchProcessor } from '@/components/tools/BatchProcessor';
 
 export default function EditorClient() {
   const [activeTool, setActiveTool] = useState<ToolType>('annotate');
@@ -21,6 +23,8 @@ export default function EditorClient() {
           {activeTool === 'convert' && <FormatConverter />}
           {activeTool === 'merge' && <PdfMerger />}
           {activeTool === 'word-to-pdf' && <WordToPdf />}
+          {activeTool === 'security' && <SecurityTool />}
+          {activeTool === 'batch' && <BatchProcessor />}
         </div>
       </main>
     </div>
