@@ -3,8 +3,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { FileUpload } from '../FileUpload';
 import { renderPdfPageToImage, applyAnnotationsToPdf, downloadFile, getPdfDocument } from '@/lib/pdf-utils';
-import { Download, Loader2, MousePointer2, Eraser, Type, ChevronLeft, ChevronRight, Trash2, FileText, ZoomIn, ZoomOut, Maximize, Move, Square, Circle, Minus, ArrowRight, Highlighter, Undo2, Redo2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Palette, Droplets } from 'lucide-react';
+import { Download, Loader2, MousePointer2, Eraser, Type, ChevronLeft, ChevronRight, Trash2, FileText, ZoomIn, ZoomOut, Maximize, Move, Square, Circle, Minus, ArrowRight, Highlighter, Undo2, Redo2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Palette, Droplets, Keyboard, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '../Toast';
+import { ProgressBar, ProcessingState } from '../ProgressBar';
+import { Tooltip } from '../Tooltip';
+import { KeyboardShortcuts } from '../KeyboardShortcuts';
 
 // Annotation types
 type AnnotationType = 
@@ -28,6 +32,7 @@ interface HistoryState {
 }
 
 export function PdfAnnotator() {
+  const { addToast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
@@ -35,6 +40,7 @@ export function PdfAnnotator() {
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [activeTool, setActiveTool] = useState<Tool>('select');
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const [annotations, setAnnotations] = useState<Record<number, AnnotationType[]>>({});
   const [zoom, setZoom] = useState(1.0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -101,10 +107,21 @@ export function PdfAnnotator() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey && !editingTextId) {
+        e.preventDefault();
+        setShowShortcuts(true);
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+        return;
+      }
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         e.preventDefault();
         if (e.shiftKey) redo();
         else undo();
+        return;
       }
       if (e.key === 'Delete' && selectedId) {
         deleteAnnotation(selectedId);
@@ -112,11 +129,25 @@ export function PdfAnnotator() {
       if (e.key === 'Escape') {
         setSelectedId(null);
         setEditingTextId(null);
+        setShowShortcuts(false);
+      }
+      // Tool shortcuts
+      if (!editingTextId && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        switch(e.key.toLowerCase()) {
+          case 'v': setActiveTool('select'); break;
+          case 't': setActiveTool('text'); break;
+          case 'r': setActiveTool('rect'); break;
+          case 'c': setActiveTool('circle'); break;
+          case 'l': setActiveTool('line'); break;
+          case 'a': setActiveTool('arrow'); break;
+          case 'h': setActiveTool('highlight'); break;
+          case 'e': setActiveTool('eraser'); break;
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedId, undo, redo]);
+  }, [selectedId, undo, redo, editingTextId]);
 
   const handleFileSelect = async (files: File[]) => {
     if (files.length === 0) return;
@@ -125,9 +156,11 @@ export function PdfAnnotator() {
     try {
       const pdf = await getPdfDocument(selectedFile);
       setNumPages(pdf.numPages);
+      addToast('success', `PDF loaded: ${selectedFile.name} (${pdf.numPages} pages)`);
     } catch (error) {
       console.error("Error loading PDF:", error);
-      alert(`Error loading PDF: ${error instanceof Error ? error.message : String(error)}`);
+      addToast('error', `Error loading PDF: ${error instanceof Error ? error.message : String(error)}`);
+      setFile(null);
       setLoading(false);
     }
   };
@@ -305,7 +338,11 @@ export function PdfAnnotator() {
       const modifiedFile = new File([modifiedPdfBytes], file.name, { type: 'application/pdf' });
       setFile(modifiedFile); setAnnotations({}); setHistory([]); setHistoryIndex(-1);
       loadPage(modifiedFile, currentPage);
-    } catch (error) { console.error("Error saving PDF:", error); alert("Error saving PDF."); }
+      addToast('success', 'PDF saved successfully!');
+    } catch (error) { 
+      console.error("Error saving PDF:", error); 
+      addToast('error', 'Error saving PDF. Please try again.'); 
+    }
     finally { setProcessing(false); }
   };
 
@@ -343,6 +380,12 @@ export function PdfAnnotator() {
           <h2 className="text-base sm:text-xl font-semibold text-gray-900 dark:text-white truncate">{file.name}</h2>
         </div>
         <div className="flex gap-2 sm:gap-3">
+          <Tooltip content="Keyboard shortcuts (?)" position="bottom">
+            <button onClick={() => setShowShortcuts(true)}
+              className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+              <Keyboard className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </Tooltip>
           <button onClick={() => { setFile(null); setAnnotations({}); setHistory([]); setHistoryIndex(-1); }}
             className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
           <button onClick={handleSave} disabled={processing}
@@ -359,79 +402,111 @@ export function PdfAnnotator() {
         <div className="flex flex-wrap gap-1 sm:gap-2 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-xl border border-gray-200 dark:border-gray-700 items-center">
           {/* Undo/Redo */}
           <div className="flex gap-1 shrink-0">
-            <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)"
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", canUndo ? "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" : "text-gray-300 dark:text-gray-600 cursor-not-allowed")}>
-              <Undo2 className="w-4 h-4" />
-            </button>
-            <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)"
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", canRedo ? "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" : "text-gray-300 dark:text-gray-600 cursor-not-allowed")}>
-              <Redo2 className="w-4 h-4" />
-            </button>
+            <Tooltip content="Undo (Ctrl+Z)" position="top">
+              <button onClick={undo} disabled={!canUndo}
+                className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", canUndo ? "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" : "text-gray-300 dark:text-gray-600 cursor-not-allowed")}>
+                <Undo2 className="w-4 h-4" />
+              </button>
+            </Tooltip>
+            <Tooltip content="Redo (Ctrl+Shift+Z)" position="top">
+              <button onClick={redo} disabled={!canRedo}
+                className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", canRedo ? "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" : "text-gray-300 dark:text-gray-600 cursor-not-allowed")}>
+                <Redo2 className="w-4 h-4" />
+              </button>
+            </Tooltip>
           </div>
 
           <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 hidden sm:block" />
 
           {/* Main tools */}
           <div className="flex gap-0.5 sm:gap-1 shrink-0">
-            <button onClick={() => { setActiveTool('select'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'select' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Select">
-              <MousePointer2 className="w-4 h-4" />
-            </button>
-            <button onClick={() => { setActiveTool('move-area'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'move-area' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Move Area">
-              <Move className="w-4 h-4" />
-            </button>
-            <button onClick={() => { setActiveTool('eraser'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'eraser' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Eraser">
-              <Eraser className="w-4 h-4" />
-            </button>
-            <button onClick={() => { setActiveTool('text'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'text' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Text">
-              <Type className="w-4 h-4" />
-            </button>
+            <Tooltip content="Select (V)" position="top">
+              <button onClick={() => { setActiveTool('select'); setSelectedId(null); }}
+                className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'select' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
+                <MousePointer2 className="w-4 h-4" />
+              </button>
+            </Tooltip>
+            <Tooltip content="Move Area" position="top">
+              <button onClick={() => { setActiveTool('move-area'); setSelectedId(null); }}
+                className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'move-area' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
+                <Move className="w-4 h-4" />
+              </button>
+            </Tooltip>
+            <Tooltip content="Eraser (E)" position="top">
+              <button onClick={() => { setActiveTool('eraser'); setSelectedId(null); }}
+                className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'eraser' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
+                <Eraser className="w-4 h-4" />
+              </button>
+            </Tooltip>
+            <Tooltip content="Text (T)" position="top">
+              <button onClick={() => { setActiveTool('text'); setSelectedId(null); }}
+                className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'text' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
+                <Type className="w-4 h-4" />
+              </button>
+            </Tooltip>
           </div>
 
           <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 hidden sm:block" />
 
           {/* Shape tools */}
           <div className="flex gap-0.5 sm:gap-1 shrink-0">
-            <button onClick={() => { setActiveTool('rect'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'rect' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Rectangle">
-              <Square className="w-4 h-4" />
-            </button>
-            <button onClick={() => { setActiveTool('circle'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'circle' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Circle">
-              <Circle className="w-4 h-4" />
-            </button>
-            <button onClick={() => { setActiveTool('line'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'line' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Line">
-              <Minus className="w-4 h-4" />
-            </button>
-            <button onClick={() => { setActiveTool('arrow'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'arrow' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Arrow">
-              <ArrowRight className="w-4 h-4" />
-            </button>
-            <button onClick={() => { setActiveTool('highlight'); setSelectedId(null); }}
-              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'highlight' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")} title="Highlight">
-              <Highlighter className="w-4 h-4" />
-            </button>
+            <Tooltip content="Rectangle (R)" position="top">
+              <button onClick={() => { setActiveTool('rect'); setSelectedId(null); }}
+                className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'rect' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
+                <Square className="w-4 h-4" />
+              </button>
+            </Tooltip>
+            <Tooltip content="Circle (C)" position="top">
+              <button onClick={() => { setActiveTool('circle'); setSelectedId(null); }}
+                className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'circle' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
+                <Circle className="w-4 h-4" />
+              </button>
+            </Tooltip>
+            <Tooltip content="Line (L)" position="top">
+              <button onClick={() => { setActiveTool('line'); setSelectedId(null); }}
+                className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'line' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
+                <Minus className="w-4 h-4" />
+              </button>
+            </Tooltip>
+            <Tooltip content="Arrow (A)" position="top">
+              <button onClick={() => { setActiveTool('arrow'); setSelectedId(null); }}
+                className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'arrow' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </Tooltip>
+            <Tooltip content="Highlight (H)" position="top">
+              <button onClick={() => { setActiveTool('highlight'); setSelectedId(null); }}
+                className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'highlight' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
+                <Highlighter className="w-4 h-4" />
+              </button>
+            </Tooltip>
           </div>
 
           {/* Zoom */}
           <div className="flex items-center gap-1 ml-auto shrink-0">
-            <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"><ZoomOut className="w-4 h-4" /></button>
+            <Tooltip content="Zoom out (Ctrl+-)" position="top">
+              <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"><ZoomOut className="w-4 h-4" /></button>
+            </Tooltip>
             <span className="text-xs font-mono w-10 sm:w-12 text-center text-gray-700 dark:text-gray-300">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"><ZoomIn className="w-4 h-4" /></button>
-            <button onClick={() => setZoom(1.0)} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hidden sm:block"><Maximize className="w-4 h-4" /></button>
+            <Tooltip content="Zoom in (Ctrl++)" position="top">
+              <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"><ZoomIn className="w-4 h-4" /></button>
+            </Tooltip>
+            <Tooltip content="Reset zoom (Ctrl+0)" position="top">
+              <button onClick={() => setZoom(1.0)} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hidden sm:block"><Maximize className="w-4 h-4" /></button>
+            </Tooltip>
           </div>
 
           {/* Page nav */}
           <div className="flex items-center gap-1 shrink-0">
-            <button onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0 || loading}
-              className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 text-gray-600 dark:text-gray-300"><ChevronLeft className="w-4 h-4" /></button>
+            <Tooltip content="Previous page" position="top">
+              <button onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0 || loading}
+                className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 text-gray-600 dark:text-gray-300"><ChevronLeft className="w-4 h-4" /></button>
+            </Tooltip>
             <span className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[3rem] sm:min-w-[4rem] text-center">{currentPage + 1}/{numPages}</span>
-            <button onClick={() => setCurrentPage(p => Math.min(numPages - 1, p + 1))} disabled={currentPage === numPages - 1 || loading}
-              className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 text-gray-600 dark:text-gray-300"><ChevronRight className="w-4 h-4" /></button>
+            <Tooltip content="Next page" position="top">
+              <button onClick={() => setCurrentPage(p => Math.min(numPages - 1, p + 1))} disabled={currentPage === numPages - 1 || loading}
+                className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 text-gray-600 dark:text-gray-300"><ChevronRight className="w-4 h-4" /></button>
+            </Tooltip>
           </div>
         </div>
 
@@ -591,7 +666,10 @@ export function PdfAnnotator() {
       <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-center p-4 lg:p-8 relative">
         {loading || !pageData ? (
           <div className="flex flex-col items-center justify-center h-full">
-            <Loader2 className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-spin mb-4" /><p className="text-gray-500 dark:text-gray-400">Loading page...</p>
+            <ProcessingState 
+              status={loading ? "Rendering page..." : "Preparing..."}
+              substatus={loading ? `Page ${currentPage + 1} of ${numPages || '?'}` : undefined}
+            />
           </div>
         ) : (
           <div className="relative shadow-2xl bg-white dark:bg-gray-800 origin-top transition-transform duration-200 rounded-lg overflow-hidden" style={{ width: 'fit-content', height: 'fit-content', transform: `scale(${zoom})` }}>
@@ -782,6 +860,9 @@ export function PdfAnnotator() {
           </div>
         )}
       </div>
+
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcuts isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
     </div>
   );
 }

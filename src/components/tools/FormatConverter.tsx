@@ -5,10 +5,12 @@ import { FileUpload } from '../FileUpload';
 import { renderPdfPagesToImages, imagesToPdf, downloadFile } from '@/lib/pdf-utils';
 import { Download, Loader2, ArrowRightLeft, FileImage, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '../Toast';
 
 type ConversionMode = 'pdf-to-image' | 'image-to-pdf';
 
 export function FormatConverter() {
+  const { addToast } = useToast();
   const [mode, setMode] = useState<ConversionMode>('pdf-to-image');
   const [files, setFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
@@ -27,13 +29,15 @@ export function FormatConverter() {
         images.forEach((imgData, index) => {
           downloadFile(imgData, `${file.name.replace('.pdf', '')}_page_${index + 1}.png`, 'image/png');
         });
+        addToast('success', `Converted ${images.length} pages to images!`);
       } else {
         const pdfBytes = await imagesToPdf(files);
         downloadFile(pdfBytes, 'converted_images.pdf', 'application/pdf');
+        addToast('success', `${files.length} images converted to PDF!`);
       }
     } catch (error) {
       console.error("Conversion error:", error);
-      alert("An error occurred during conversion.");
+      addToast('error', "An error occurred during conversion.");
     } finally {
       setProcessing(false);
     }

@@ -5,8 +5,10 @@ import { FileUpload } from '../FileUpload';
 import { mergePdfs, downloadFile } from '@/lib/pdf-utils';
 import { Download, Loader2, FileText, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '../Toast';
 
 export function PdfMerger() {
+  const { addToast } = useToast();
   const [files, setFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
 
@@ -35,14 +37,15 @@ export function PdfMerger() {
   };
 
   const handleMerge = async () => {
-    if (files.length < 2) { alert("Select at least 2 PDF files to merge."); return; }
+    if (files.length < 2) { addToast('warning', 'Select at least 2 PDF files to merge.'); return; }
     setProcessing(true);
     try {
       const mergedPdfBytes = await mergePdfs(files);
       downloadFile(mergedPdfBytes, 'merged_document.pdf', 'application/pdf');
+      addToast('success', `${files.length} PDFs merged successfully!`);
     } catch (error) {
       console.error("Merge error:", error);
-      alert("An error occurred while merging PDFs.");
+      addToast('error', 'An error occurred while merging PDFs.');
     } finally {
       setProcessing(false);
     }

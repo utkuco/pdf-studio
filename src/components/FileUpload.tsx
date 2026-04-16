@@ -2,7 +2,7 @@
 
 import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { UploadCloud } from 'lucide-react';
+import { UploadCloud, FileIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FileUploadProps {
@@ -14,14 +14,21 @@ interface FileUploadProps {
   subtitle?: string;
 }
 
-export function FileUpload({ onFilesSelected, accept, multiple = true, className, title = "Drop files here", subtitle = "or click to browse" }: FileUploadProps) {
+export function FileUpload({ 
+  onFilesSelected, 
+  accept, 
+  multiple = true, 
+  className, 
+  title = "Drop files here", 
+  subtitle = "or click to browse" 
+}: FileUploadProps) {
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
       onFilesSelected(acceptedFiles);
     }
   }, [onFilesSelected]);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, isDragReject, isDragAccept } = useDropzone({
     onDrop, accept, multiple
   } as any);
 
@@ -30,38 +37,87 @@ export function FileUpload({ onFilesSelected, accept, multiple = true, className
       {...getRootProps()}
       className={cn(
         "border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-300 flex flex-col items-center justify-center min-h-[200px] sm:min-h-[240px]",
-        isDragActive 
-          ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 shadow-lg shadow-blue-500/20 scale-[1.02]" 
-          : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 bg-gray-50/50 dark:bg-gray-800/50 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 hover:scale-[1.01]",
+        // Base states
+        "bg-gray-50/50 dark:bg-gray-800/50",
+        // Drag active states
+        isDragActive && !isDragReject && "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 shadow-lg shadow-blue-500/20 scale-[1.02]",
+        isDragActive && isDragReject && "border-red-500 bg-red-50/50 dark:bg-red-900/20",
+        // Non-drag states
+        !isDragActive && "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 hover:scale-[1.01]",
         className
       )}
     >
       <input {...getInputProps()} />
       
-      {/* Upload Icon */}
+      {/* Animated Icon Container */}
       <div className={cn(
         "p-4 rounded-2xl mb-4 transition-all duration-300",
-        isDragActive 
-          ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 scale-110" 
-          : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 group-hover:bg-gray-200 dark:group-hover:bg-gray-600"
+        isDragActive && !isDragReject && "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 scale-110",
+        isDragActive && isDragReject && "bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400",
+        !isDragActive && "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 group-hover:bg-gray-200 dark:group-hover:bg-gray-600"
       )}>
-        <UploadCloud className="w-10 h-10 sm:w-12 sm:h-12" />
+        {isDragActive && isDragReject ? (
+          <FileIcon className="w-10 h-10 sm:w-12 sm:h-12" />
+        ) : (
+          <UploadCloud className={cn(
+            "w-10 h-10 sm:w-12 sm:h-12 transition-transform duration-300",
+            isDragActive && "animate-bounce"
+          )} />
+        )}
       </div>
       
       {/* Title */}
-      <p className="text-lg sm:text-xl font-semibold text-gray-700 dark:text-gray-200 mb-1">
-        {title}
+      <p className={cn(
+        "text-lg sm:text-xl font-semibold transition-colors duration-200 mb-1",
+        isDragActive && !isDragReject && "text-blue-700 dark:text-blue-300",
+        isDragActive && isDragReject && "text-red-700 dark:text-red-300",
+        !isDragActive && "text-gray-700 dark:text-gray-200"
+      )}>
+        {isDragActive && isDragReject 
+          ? "Invalid file type" 
+          : isDragActive 
+            ? "Drop files here!" 
+            : title
+        }
       </p>
       
       {/* Subtitle */}
-      <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">
-        {subtitle}
+      <p className={cn(
+        "text-sm sm:text-base transition-colors duration-200",
+        isDragActive && !isDragReject && "text-blue-600 dark:text-blue-400",
+        isDragActive && isDragReject && "text-red-500 dark:text-red-400",
+        !isDragActive && "text-gray-500 dark:text-gray-400"
+      )}>
+        {isDragActive && isDragReject 
+          ? "This file type is not accepted" 
+          : isDragActive 
+            ? "Release to upload" 
+            : subtitle
+        }
       </p>
       
       {/* File type hint */}
-      <p className="text-xs text-gray-400 dark:text-gray-500 mt-3 px-3 py-1.5 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-        PDF, Images, Word documents supported
-      </p>
+      {!isDragActive && (
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-3 px-3 py-1.5 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+          PDF, Images, Word documents supported
+        </p>
+      )}
+      
+      {/* Accept/Reject indicators */}
+      {isDragActive && (
+        <div className="absolute top-4 right-4">
+          {isDragAccept && (
+            <div className="px-2 py-1 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-xs font-medium rounded-lg">
+              ✓ Accepted
+            </div>
+          )}
+          {isDragReject && (
+            <div className="px-2 py-1 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-xs font-medium rounded-lg">
+              ✕ Rejected
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

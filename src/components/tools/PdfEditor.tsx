@@ -5,8 +5,11 @@ import { FileUpload } from '../FileUpload';
 import { renderPdfPagesToImages, editPdfPages, downloadFile } from '@/lib/pdf-utils';
 import { Trash2, RotateCw, Download, Loader2, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '../Toast';
+import { ProcessingState } from '../ProgressBar';
 
 export function PdfEditor() {
+  const { addToast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [pages, setPages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -22,9 +25,10 @@ export function PdfEditor() {
     try {
       const renderedPages = await renderPdfPagesToImages(selectedFile, 1.0);
       setPages(renderedPages);
+      addToast('success', `PDF loaded: ${selectedFile.name} (${renderedPages.length} pages)`);
     } catch (error) {
       console.error("Error rendering PDF:", error);
-      alert(`Error loading PDF: ${error instanceof Error ? error.message : String(error)}`);
+      addToast('error', `Error loading PDF: ${error instanceof Error ? error.message : String(error)}`);
       setFile(null);
     } finally {
       setLoading(false);
@@ -45,9 +49,10 @@ export function PdfEditor() {
     try {
       const modifiedPdfBytes = await editPdfPages(file, actions);
       downloadFile(modifiedPdfBytes, `edited_${file.name}`, 'application/pdf');
+      addToast('success', 'PDF saved successfully!');
     } catch (error) {
       console.error("Error saving PDF:", error);
-      alert("Error saving PDF.");
+      addToast('error', 'Error saving PDF. Please try again.');
     } finally {
       setProcessing(false);
     }
@@ -87,8 +92,7 @@ export function PdfEditor() {
       </div>
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="w-10 h-10 text-blue-600 dark:text-blue-400 animate-spin mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">Loading pages...</p>
+          <ProcessingState status="Rendering pages..." substatus={`${file.name}`} />
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
