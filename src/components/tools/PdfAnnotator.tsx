@@ -334,107 +334,127 @@ export function PdfAnnotator() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 shrink-0">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-blue-600" />{file.name}
-          </h2>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-gray-200 shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <button onClick={() => setFile(null)} className="sm:hidden p-1.5 text-gray-500 hover:text-gray-700">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <FileText className="w-5 h-5 text-blue-600 flex-shrink-0" />
+          <h2 className="text-base sm:text-xl font-semibold text-gray-900 truncate">{file.name}</h2>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3">
           <button onClick={() => { setFile(null); setAnnotations({}); setHistory([]); setHistoryIndex(-1); }}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+            className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
           <button onClick={handleSave} disabled={processing}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
-            {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Save Changes
+            className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1 sm:gap-2">
+            {processing ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" /> : <Download className="w-3 h-3 sm:w-4 sm:h-4" />} <span className="hidden sm:inline">Save</span>
           </button>
         </div>
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-2 mb-4 shrink-0 bg-gray-50 p-2 rounded-xl border border-gray-200 items-center">
-        {/* Undo/Redo */}
-        <div className="flex gap-1 shrink-0">
-          <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)"
-            className={cn("p-2 rounded-lg text-sm font-medium transition-colors", canUndo ? "text-gray-600 hover:bg-gray-200" : "text-gray-300 cursor-not-allowed")}>
-            <Undo2 className="w-4 h-4" />
-          </button>
-          <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)"
-            className={cn("p-2 rounded-lg text-sm font-medium transition-colors", canRedo ? "text-gray-600 hover:bg-gray-200" : "text-gray-300 cursor-not-allowed")}>
-            <Redo2 className="w-4 h-4" />
-          </button>
+      <div className="flex flex-col gap-2 mb-3 sm:mb-4 shrink-0">
+        
+        {/* Main Toolbar Row - Tools */}
+        <div className="flex flex-wrap gap-1 sm:gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200 items-center">
+          {/* Undo/Redo */}
+          <div className="flex gap-1 shrink-0">
+            <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)"
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", canUndo ? "text-gray-600 hover:bg-gray-200" : "text-gray-300 cursor-not-allowed")}>
+              <Undo2 className="w-4 h-4" />
+            </button>
+            <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)"
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", canRedo ? "text-gray-600 hover:bg-gray-200" : "text-gray-300 cursor-not-allowed")}>
+              <Redo2 className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="w-px h-6 bg-gray-300 hidden sm:block" />
+
+          {/* Main tools */}
+          <div className="flex gap-0.5 sm:gap-1 shrink-0">
+            <button onClick={() => { setActiveTool('select'); setSelectedId(null); }}
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'select' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Select">
+              <MousePointer2 className="w-4 h-4" />
+            </button>
+            <button onClick={() => { setActiveTool('move-area'); setSelectedId(null); }}
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'move-area' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Move Area">
+              <Move className="w-4 h-4" />
+            </button>
+            <button onClick={() => { setActiveTool('eraser'); setSelectedId(null); }}
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'eraser' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Eraser">
+              <Eraser className="w-4 h-4" />
+            </button>
+            <button onClick={() => { setActiveTool('text'); setSelectedId(null); }}
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'text' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Text">
+              <Type className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="w-px h-6 bg-gray-300 hidden sm:block" />
+
+          {/* Shape tools */}
+          <div className="flex gap-0.5 sm:gap-1 shrink-0">
+            <button onClick={() => { setActiveTool('rect'); setSelectedId(null); }}
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'rect' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Rectangle">
+              <Square className="w-4 h-4" />
+            </button>
+            <button onClick={() => { setActiveTool('circle'); setSelectedId(null); }}
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'circle' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Circle">
+              <Circle className="w-4 h-4" />
+            </button>
+            <button onClick={() => { setActiveTool('line'); setSelectedId(null); }}
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'line' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Line">
+              <Minus className="w-4 h-4" />
+            </button>
+            <button onClick={() => { setActiveTool('arrow'); setSelectedId(null); }}
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'arrow' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Arrow">
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <button onClick={() => { setActiveTool('highlight'); setSelectedId(null); }}
+              className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'highlight' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Highlight">
+              <Highlighter className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Zoom */}
+          <div className="flex items-center gap-1 ml-auto shrink-0">
+            <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="p-1.5 rounded hover:bg-gray-200"><ZoomOut className="w-4 h-4" /></button>
+            <span className="text-xs font-mono w-10 sm:w-12 text-center">{Math.round(zoom * 100)}%</span>
+            <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-1.5 rounded hover:bg-gray-200"><ZoomIn className="w-4 h-4" /></button>
+            <button onClick={() => setZoom(1.0)} className="p-1.5 rounded hover:bg-gray-200 hidden sm:block"><Maximize className="w-4 h-4" /></button>
+          </div>
+
+          {/* Page nav */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0 || loading}
+              className="p-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-50"><ChevronLeft className="w-4 h-4" /></button>
+            <span className="text-xs font-medium text-gray-700 min-w-[3rem] sm:min-w-[4rem] text-center">{currentPage + 1}/{numPages}</span>
+            <button onClick={() => setCurrentPage(p => Math.min(numPages - 1, p + 1))} disabled={currentPage === numPages - 1 || loading}
+              className="p-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-50"><ChevronRight className="w-4 h-4" /></button>
+          </div>
         </div>
 
-        <div className="w-px h-6 bg-gray-300" />
-
-        {/* Main tools */}
-        <div className="flex gap-1 shrink-0">
-          <button onClick={() => { setActiveTool('select'); setSelectedId(null); }}
-            className={cn("p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors", activeTool === 'select' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Select">
-            <MousePointer2 className="w-4 h-4" />
-          </button>
-          <button onClick={() => { setActiveTool('move-area'); setSelectedId(null); }}
-            className={cn("p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors", activeTool === 'move-area' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Move Area">
-            <Move className="w-4 h-4" />
-          </button>
-          <button onClick={() => { setActiveTool('eraser'); setSelectedId(null); }}
-            className={cn("p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors", activeTool === 'eraser' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Eraser">
-            <Eraser className="w-4 h-4" />
-          </button>
-          <button onClick={() => { setActiveTool('text'); setSelectedId(null); }}
-            className={cn("p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors", activeTool === 'text' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Text">
-            <Type className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="w-px h-6 bg-gray-300" />
-
-        {/* Shape tools */}
-        <div className="flex gap-1 shrink-0">
-          <button onClick={() => { setActiveTool('rect'); setSelectedId(null); }}
-            className={cn("p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors", activeTool === 'rect' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Rectangle">
-            <Square className="w-4 h-4" />
-          </button>
-          <button onClick={() => { setActiveTool('circle'); setSelectedId(null); }}
-            className={cn("p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors", activeTool === 'circle' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Circle">
-            <Circle className="w-4 h-4" />
-          </button>
-          <button onClick={() => { setActiveTool('line'); setSelectedId(null); }}
-            className={cn("p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors", activeTool === 'line' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Line">
-            <Minus className="w-4 h-4" />
-          </button>
-          <button onClick={() => { setActiveTool('arrow'); setSelectedId(null); }}
-            className={cn("p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors", activeTool === 'arrow' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Arrow">
-            <ArrowRight className="w-4 h-4" />
-          </button>
-          <button onClick={() => { setActiveTool('highlight'); setSelectedId(null); }}
-            className={cn("p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors", activeTool === 'highlight' ? "bg-white shadow-sm text-blue-600" : "text-gray-600 hover:bg-gray-200/50")} title="Highlight">
-            <Highlighter className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="w-px h-6 bg-gray-300" />
-
-        {/* Text properties */}
+        {/* Properties Row - Text */}
         {showTextProps && (
-          <div className="flex items-center gap-2 border-l border-gray-300 pl-4 shrink-0">
+          <div className="flex flex-wrap gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200 items-center">
             {/* Color picker */}
             <div className="flex items-center gap-1">
-              <Palette className="w-3.5 h-3.5 text-gray-400" />
               <div className="flex gap-0.5">
-                {COLOR_PRESETS.slice(0, 6).map(color => (
+                {['#000000', '#FF0000', '#0000FF', '#00AA00', '#FF6600', '#9900FF'].map(color => (
                   <button key={color} onClick={() => { setTextColor(color); handlePropertyChange({ color }); }}
-                    className={cn("w-5 h-5 rounded-sm border border-gray-200 transition-transform hover:scale-110", textColor === color && "ring-2 ring-blue-500 ring-offset-1")}
+                    className={cn("w-6 h-6 sm:w-5 sm:h-5 rounded-sm border border-gray-200 transition-transform hover:scale-110", textColor === color && "ring-2 ring-blue-500 ring-offset-1")}
                     style={{ backgroundColor: color }} />
                 ))}
               </div>
               <input type="color" value={textColor} onChange={(e) => { setTextColor(e.target.value); handlePropertyChange({ color: e.target.value }); }}
-                className="w-6 h-6 rounded cursor-pointer border-0 p-0" />
+                className="w-7 h-7 sm:w-6 sm:h-6 rounded cursor-pointer border-0 p-0" />
             </div>
             
             {/* Size */}
             <select value={textSize} onChange={(e) => { const size = Number(e.target.value); setTextSize(size); handlePropertyChange({ fontSize: size }); }}
-              className="text-sm border-gray-300 rounded-md shadow-sm py-1 px-2">
-              {[10, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48, 64].map(size => (<option key={size} value={size}>{size}px</option>))}
+              className="text-xs sm:text-sm border-gray-300 rounded-md shadow-sm py-1 px-1 sm:px-2 w-16 sm:w-auto">
+              {[10, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48, 64].map(size => (<option key={size} value={size}>{size}</option>))}
             </select>
             
             {/* Bold/Italic/Underline */}
@@ -461,127 +481,110 @@ export function PdfAnnotator() {
             <div className="flex items-center gap-1">
               <Droplets className="w-3.5 h-3.5 text-gray-400" />
               <input type="range" min="0.1" max="1" step="0.1" value={textOpacity} onChange={(e) => { setTextOpacity(Number(e.target.value)); handlePropertyChange({ opacity: Number(e.target.value) }); }}
-                className="w-16" />
+                className="w-12 sm:w-16" />
             </div>
           </div>
         )}
 
-        {/* Shape properties */}
+        {/* Properties Row - Shape */}
         {showShapeProps && (
-          <div className="flex items-center gap-3 border-l border-gray-300 pl-4 shrink-0">
+          <div className="flex flex-wrap gap-2 sm:gap-3 bg-gray-50 p-2 rounded-xl border border-gray-200 items-center">
             <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-500">Stroke</span>
+              <span className="text-xs text-gray-500 hidden sm:inline">Stroke</span>
               <div className="flex gap-0.5">
                 {['#000000', '#FF0000', '#0000FF', '#00AA00'].map(color => (
                   <button key={color} onClick={() => { setShapeStrokeColor(color); handlePropertyChange({ strokeColor: color }); }}
-                    className={cn("w-5 h-5 rounded-sm border border-gray-200 transition-transform hover:scale-110", shapeStrokeColor === color && "ring-2 ring-blue-500 ring-offset-1")}
+                    className={cn("w-6 h-6 sm:w-5 sm:h-5 rounded-sm border border-gray-200 transition-transform hover:scale-110", shapeStrokeColor === color && "ring-2 ring-blue-500 ring-offset-1")}
                     style={{ backgroundColor: color }} />
                 ))}
               </div>
               <input type="color" value={shapeStrokeColor} onChange={(e) => { setShapeStrokeColor(e.target.value); handlePropertyChange({ strokeColor: e.target.value }); }}
-                className="w-6 h-6 rounded cursor-pointer border-0 p-0" />
+                className="w-7 h-7 sm:w-6 sm:h-6 rounded cursor-pointer border-0 p-0" />
             </div>
             
             <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-500">Fill</span>
+              <span className="text-xs text-gray-500 hidden sm:inline">Fill</span>
               <div className="flex gap-0.5">
                 {['#FFFFFF', '#FF0000', '#0000FF', '#FFFF00'].map(color => (
                   <button key={color} onClick={() => { setShapeFillColor(color); handlePropertyChange({ fillColor: color }); }}
-                    className={cn("w-5 h-5 rounded-sm border border-gray-200 transition-transform hover:scale-110", shapeFillColor === color && "ring-2 ring-blue-500 ring-offset-1")}
+                    className={cn("w-6 h-6 sm:w-5 sm:h-5 rounded-sm border border-gray-200 transition-transform hover:scale-110", shapeFillColor === color && "ring-2 ring-blue-500 ring-offset-1")}
                     style={{ backgroundColor: color }} />
                 ))}
               </div>
               <input type="color" value={shapeFillColor} onChange={(e) => { setShapeFillColor(e.target.value); handlePropertyChange({ fillColor: e.target.value }); }}
-                className="w-6 h-6 rounded cursor-pointer border-0 p-0" />
+                className="w-7 h-7 sm:w-6 sm:h-6 rounded cursor-pointer border-0 p-0" />
             </div>
             
             <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-500">Width</span>
+              <span className="text-xs text-gray-500">W</span>
               <input type="range" min="1" max="10" value={shapeStrokeWidth} onChange={(e) => { setShapeStrokeWidth(Number(e.target.value)); handlePropertyChange({ strokeWidth: Number(e.target.value) }); }}
-                className="w-16" />
+                className="w-12 sm:w-16" />
               <span className="text-xs text-gray-600 w-4">{shapeStrokeWidth}</span>
             </div>
             
             <div className="flex items-center gap-1">
               <Droplets className="w-3.5 h-3.5 text-gray-400" />
               <input type="range" min="0.1" max="1" step="0.1" value={shapeOpacity} onChange={(e) => { setShapeOpacity(Number(e.target.value)); handlePropertyChange({ opacity: Number(e.target.value) }); }}
-                className="w-16" />
+                className="w-12 sm:w-16" />
             </div>
           </div>
         )}
 
-        {/* Line/Arrow properties */}
+        {/* Properties Row - Line/Arrow */}
         {showLineProps && (
-          <div className="flex items-center gap-3 border-l border-gray-300 pl-4 shrink-0">
+          <div className="flex flex-wrap gap-2 sm:gap-3 bg-gray-50 p-2 rounded-xl border border-gray-200 items-center">
             <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-500">Color</span>
+              <span className="text-xs text-gray-500 hidden sm:inline">Color</span>
               <div className="flex gap-0.5">
                 {['#000000', '#FF0000', '#0000FF', '#00AA00'].map(color => (
                   <button key={color} onClick={() => { setShapeStrokeColor(color); handlePropertyChange({ strokeColor: color }); }}
-                    className={cn("w-5 h-5 rounded-sm border border-gray-200 transition-transform hover:scale-110", shapeStrokeColor === color && "ring-2 ring-blue-500 ring-offset-1")}
+                    className={cn("w-6 h-6 sm:w-5 sm:h-5 rounded-sm border border-gray-200 transition-transform hover:scale-110", shapeStrokeColor === color && "ring-2 ring-blue-500 ring-offset-1")}
                     style={{ backgroundColor: color }} />
                 ))}
               </div>
               <input type="color" value={shapeStrokeColor} onChange={(e) => { setShapeStrokeColor(e.target.value); handlePropertyChange({ strokeColor: e.target.value }); }}
-                className="w-6 h-6 rounded cursor-pointer border-0 p-0" />
+                className="w-7 h-7 sm:w-6 sm:h-6 rounded cursor-pointer border-0 p-0" />
             </div>
             
             <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-500">Width</span>
+              <span className="text-xs text-gray-500">W</span>
               <input type="range" min="1" max="10" value={shapeStrokeWidth} onChange={(e) => { setShapeStrokeWidth(Number(e.target.value)); handlePropertyChange({ strokeWidth: Number(e.target.value) }); }}
-                className="w-16" />
+                className="w-12 sm:w-16" />
               <span className="text-xs text-gray-600 w-4">{shapeStrokeWidth}</span>
             </div>
             
             <div className="flex items-center gap-1">
               <Droplets className="w-3.5 h-3.5 text-gray-400" />
               <input type="range" min="0.1" max="1" step="0.1" value={shapeOpacity} onChange={(e) => { setShapeOpacity(Number(e.target.value)); handlePropertyChange({ opacity: Number(e.target.value) }); }}
-                className="w-16" />
+                className="w-12 sm:w-16" />
             </div>
           </div>
         )}
 
-        {/* Highlight properties */}
+        {/* Properties Row - Highlight */}
         {showHighlightProps && (
-          <div className="flex items-center gap-3 border-l border-gray-300 pl-4 shrink-0">
+          <div className="flex flex-wrap gap-2 sm:gap-3 bg-gray-50 p-2 rounded-xl border border-gray-200 items-center">
             <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-500">Color</span>
+              <span className="text-xs text-gray-500 hidden sm:inline">Color</span>
               <div className="flex gap-0.5">
                 {['#FFFF00', '#00FF00', '#FF6600', '#FF00FF'].map(color => (
                   <button key={color} onClick={() => { setHighlightColor(color); handlePropertyChange({ color }); }}
-                    className={cn("w-5 h-5 rounded-sm border border-gray-200 transition-transform hover:scale-110", highlightColor === color && "ring-2 ring-blue-500 ring-offset-1")}
+                    className={cn("w-6 h-6 sm:w-5 sm:h-5 rounded-sm border border-gray-200 transition-transform hover:scale-110", highlightColor === color && "ring-2 ring-blue-500 ring-offset-1")}
                     style={{ backgroundColor: color }} />
                 ))}
               </div>
               <input type="color" value={highlightColor} onChange={(e) => { setHighlightColor(e.target.value); handlePropertyChange({ color: e.target.value }); }}
-                className="w-6 h-6 rounded cursor-pointer border-0 p-0" />
+                className="w-7 h-7 sm:w-6 sm:h-6 rounded cursor-pointer border-0 p-0" />
             </div>
             
             <div className="flex items-center gap-1">
               <span className="text-xs text-gray-500">Opacity</span>
               <input type="range" min="0.1" max="0.8" step="0.1" value={highlightOpacity} onChange={(e) => { setHighlightOpacity(Number(e.target.value)); handlePropertyChange({ opacity: Number(e.target.value) }); }}
-                className="w-16" />
+                className="w-12 sm:w-16" />
               <span className="text-xs text-gray-600 w-6">{highlightOpacity}</span>
             </div>
           </div>
         )}
-
-        {/* Zoom */}
-        <div className="flex items-center gap-1 ml-auto shrink-0">
-          <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="p-1.5 rounded hover:bg-gray-200"><ZoomOut className="w-4 h-4" /></button>
-          <span className="text-xs font-mono w-12 text-center">{Math.round(zoom * 100)}%</span>
-          <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-1.5 rounded hover:bg-gray-200"><ZoomIn className="w-4 h-4" /></button>
-          <button onClick={() => setZoom(1.0)} className="p-1.5 rounded hover:bg-gray-200"><Maximize className="w-4 h-4" /></button>
-        </div>
-
-        {/* Page nav */}
-        <div className="flex items-center gap-1 shrink-0">
-          <button onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0 || loading}
-            className="p-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-50"><ChevronLeft className="w-5 h-5" /></button>
-          <span className="text-sm font-medium text-gray-700 min-w-[4rem] text-center">{currentPage + 1} / {numPages}</span>
-          <button onClick={() => setCurrentPage(p => Math.min(numPages - 1, p + 1))} disabled={currentPage === numPages - 1 || loading}
-            className="p-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-50"><ChevronRight className="w-5 h-5" /></button>
-        </div>
       </div>
 
       {/* Canvas area */}
