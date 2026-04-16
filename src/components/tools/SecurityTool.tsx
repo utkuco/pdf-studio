@@ -108,7 +108,7 @@ export function SecurityTool() {
       </div>
 
       {/* Mode Selector */}
-      <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-xl mb-8 w-fit mx-auto">
+      <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-xl mb-6 w-fit mx-auto">
         <button 
           onClick={() => { setMode('encrypt'); setFile(null); setPassword(''); setConfirmPassword(''); setIsProtected(null); }}
           className={cn("flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all",
@@ -118,7 +118,7 @@ export function SecurityTool() {
         </button>
         <button 
           onClick={() => { setMode('decrypt'); setFile(null); setPassword(''); setConfirmPassword(''); setIsProtected(null); }}
-          className={cn("flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all",
+          className={cn("flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all relative",
             mode === 'decrypt' ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200")}
         >
           <Unlock className="w-4 h-4" /> Decrypt
@@ -131,6 +131,21 @@ export function SecurityTool() {
           <Key className="w-4 h-4" /> Remove Password
         </button>
       </div>
+      
+      {/* Info Banner */}
+      {mode !== 'encrypt' && (
+        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl mb-6">
+          <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-medium text-amber-800 dark:text-amber-200 mb-1">
+              Browser limitation
+            </p>
+            <p className="text-amber-700 dark:text-amber-300">
+              PDF decryption and password removal require desktop application or server-side processing for security reasons. You can still encrypt PDFs in your browser.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         {!file ? (

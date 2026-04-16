@@ -317,30 +317,27 @@ export function downloadFile(
   URL.revokeObjectURL(url);
 }
 
-// PDF Encryption/Decryption using pdf-lib
-// Note: pdf-lib does not support PDF encryption directly
-// For production, consider using a separate encryption library or service
-// This is a placeholder implementation
+// PDF Encryption using @pdfsmaller/pdf-encrypt-lite (RC4 128-bit)
+// Decryption requires server-side processing due to browser security restrictions
 
 export async function encryptPdf(file: File, password: string): Promise<Uint8Array> {
-  // pdf-lib doesn't support encryption natively
-  // For demo purposes, we'll just return the original PDF
-  // In production, use a library like 'node-pdfencrypt' or server-side encryption
-  console.warn('PDF encryption requires additional library. Returning original file.');
-  return new Uint8Array(await file.arrayBuffer());
+  const { encryptPDF } = await import('@pdfsmaller/pdf-encrypt-lite');
+  const arrayBuffer = await file.arrayBuffer();
+  const pdfBytes = new Uint8Array(arrayBuffer);
+  return await encryptPDF(pdfBytes, password, password);
 }
 
 export async function decryptPdf(file: File, password: string): Promise<Uint8Array> {
-  // For demo purposes, return the original PDF
-  // Real implementation would verify password and decrypt
-  console.warn('PDF decryption requires additional library. Returning original file.');
-  return new Uint8Array(await file.arrayBuffer());
+  // Browser cannot decrypt PDFs - requires server-side processing
+  // For security reasons, browsers block attempts to decrypt encrypted PDFs
+  console.warn('PDF decryption is not available in browser. This requires server-side processing.');
+  throw new Error('PDF decryption is not supported in browser. Please use a desktop PDF application to decrypt the file, then upload it again.');
 }
 
 export async function removePdfPassword(file: File, currentPassword: string): Promise<Uint8Array> {
-  // pdf-lib doesn't support password removal
-  console.warn('PDF password removal requires additional library. Returning original file.');
-  return new Uint8Array(await file.arrayBuffer());
+  // Browser cannot remove password - requires server-side processing
+  console.warn('PDF password removal is not available in browser.');
+  throw new Error('PDF password removal is not supported in browser. Please use a desktop PDF application to remove the password.');
 }
 
 export async function isPdfPasswordProtected(file: File): Promise<boolean> {
