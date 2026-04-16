@@ -17,13 +17,10 @@ type TranslationKey = keyof typeof translations.en;
 
 const translations = {
   en: {
-    // Nav & Common
     openEditor: 'Open Editor',
     goHome: 'Go to Home',
     secureFast: 'Secure & Fast Tools',
     privacyNote: 'All processing happens in your browser. Files are never uploaded.',
-
-    // Tools
     annotate: 'Annotate',
     annotateDesc: 'Add text, erase content, and move elements on any PDF page.',
     editPages: 'Edit Pages',
@@ -34,8 +31,6 @@ const translations = {
     mergePdfDesc: 'Combine multiple PDF files into one document.',
     wordToPdf: 'Word → PDF',
     wordToPdfDesc: 'Convert Word documents to PDF instantly.',
-
-    // Home
     browserBased: '100% Browser-Based — Your files never leave your device',
     heroTitle: 'Every PDF tool you need.',
     heroSubtitle: 'Free & private.',
@@ -53,8 +48,6 @@ const translations = {
     ctaTitle: 'Ready to get started?',
     ctaDesc: 'No account needed. No file size limits. Just open and start editing.',
     footerNote: 'All processing runs locally in your browser.',
-
-    // Editor specific
     selectFile: 'Select File',
     dropHere: 'Drop file here',
     dragWordFile: 'Drag Word file here',
@@ -67,13 +60,15 @@ const translations = {
     convertToPdf: 'Convert Word documents to PDF in seconds.',
     allProcessingBrowser: 'All processing happens in your browser.',
     dragDrop: 'Drag and drop for effortless file upload.',
+    remove: 'Remove',
+    successConvert: 'Successfully converted and downloaded!',
+    converting: 'Converting',
   },
   tr: {
     openEditor: 'Düzenleyiciyi Aç',
     goHome: 'Ana Sayfaya Git',
     secureFast: 'Güvenli ve Hızlı Araçlar',
     privacyNote: 'Tüm işlemler tarayıcınızda gerçekleşir. Dosyalarınız hiçbir zaman yüklenmez.',
-
     annotate: 'İşaretle',
     annotateDesc: 'Herhangi bir PDF sayfasına metin ekleyin, içerik silin ve öğeleri taşıyın.',
     editPages: 'Sayfa Düzenle',
@@ -84,7 +79,6 @@ const translations = {
     mergePdfDesc: 'Birden fazla PDF dosyasını tek bir belge halinde birleştirin.',
     wordToPdf: 'Word → PDF',
     wordToPdfDesc: 'Word belgelerini anında PDF\'e dönüştürün.',
-
     browserBased: '%100 Tarayıcı Tabanlı — Dosyalarınız cihazınızdan ayrılmaz',
     heroTitle: 'İhtiyacınız olan tüm PDF araçları.',
     heroSubtitle: 'Ücretsiz ve özel.',
@@ -102,7 +96,6 @@ const translations = {
     ctaTitle: 'Başlamaya hazır mısınız?',
     ctaDesc: 'Hesap gerekmez. Dosya boyutu sınırı yok. Açın ve düzenlemeye başlayın.',
     footerNote: 'Tüm işlemler tarayıcınızda yerel olarak çalışır.',
-
     selectFile: 'Dosya Seç',
     dropHere: 'Dosyayı buraya bırakın',
     dragWordFile: 'Word dosyasını buraya sürükleyin',
@@ -115,6 +108,9 @@ const translations = {
     convertToPdf: 'Word belgelerini saniyeler içinde PDF\'e dönüştürün.',
     allProcessingBrowser: 'Tüm işlemler tarayıcınızda gerçekleşir.',
     dragDrop: 'Zahmetsiz dosya yükleme için sürükle ve bırak.',
+    remove: 'Kaldır',
+    successConvert: 'Başarıyla dönüştürüldü ve indirildi!',
+    converting: 'Dönüştürülüyor',
   },
   es: {
     openEditor: 'Abrir Editor',
@@ -146,7 +142,7 @@ const translations = {
     worksEverywhere: 'Funciona en Todas Partes',
     worksEverywhereDesc: 'Úsalo en cualquier dispositivo con navegador moderno. Sin instalación.',
     ctaTitle: '¿Listo para comenzar?',
-    ctaDesc: 'Sin cuenta necesaria. Sin límites de tamaño de archivo. Solo abre y empieza a editar.',
+    ctaDesc: 'Sin cuenta requerida. Sin límites de tamaño de archivo. Solo abre y empieza a editar.',
     footerNote: 'Todo el procesamiento se ejecuta localmente en tu navegador.',
     selectFile: 'Seleccionar Archivo',
     dropHere: 'Suelta el archivo aquí',
@@ -160,6 +156,9 @@ const translations = {
     convertToPdf: 'Convierte documentos Word a PDF en segundos.',
     allProcessingBrowser: 'Todo el procesamiento ocurre en tu navegador.',
     dragDrop: 'Arrastra y suelta para subir archivos sin esfuerzo.',
+    remove: 'Eliminar',
+    successConvert: '¡Convertido y descargado exitosamente!',
+    converting: 'Convirtiendo',
   },
   fr: {
     openEditor: 'Ouvrir l\'Éditeur',
@@ -205,6 +204,9 @@ const translations = {
     convertToPdf: 'Convertissez des documents Word en PDF en quelques secondes.',
     allProcessingBrowser: 'Tout le traitement se fait dans votre navigateur.',
     dragDrop: 'Glissez-déposez pour télécharger des fichiers sans effort.',
+    remove: 'Supprimer',
+    successConvert: 'Converti et téléchargé avec succès!',
+    converting: 'Conversion',
   },
   de: {
     openEditor: 'Editor Öffnen',
@@ -250,6 +252,9 @@ const translations = {
     convertToPdf: 'Konvertieren Sie Word-Dokumente in Sekunden in PDF.',
     allProcessingBrowser: 'Alle Verarbeitung findet in Ihrem Browser statt.',
     dragDrop: 'Drag & Drop für mühelosen Datei-Upload.',
+    remove: 'Entfernen',
+    successConvert: 'Erfolgreich konvertiert und heruntergeladen!',
+    converting: 'Konvertierung',
   },
   it: {
     openEditor: 'Apri Editor',
@@ -295,6 +300,9 @@ const translations = {
     convertToPdf: 'Converti documenti Word in PDF in pochi secondi.',
     allProcessingBrowser: 'Tutta l\'elaborazione avviene nel tuo browser.',
     dragDrop: 'Drag & drop per il caricamento effortless dei file.',
+    remove: 'Rimuovi',
+    successConvert: 'Convertito e scaricato con successo!',
+    converting: 'Conversione',
   },
   pt: {
     openEditor: 'Abrir Editor',
@@ -340,6 +348,9 @@ const translations = {
     convertToPdf: 'Converta documentos Word para PDF em segundos.',
     allProcessingBrowser: 'Todo o processamento ocorre no seu navegador.',
     dragDrop: 'Arraste e solte para enviar arquivos sem esforço.',
+    remove: 'Remover',
+    successConvert: 'Convertido e baixado com sucesso!',
+    converting: 'Convertendo',
   },
   ru: {
     openEditor: 'Открыть Редактор',
@@ -385,6 +396,9 @@ const translations = {
     convertToPdf: 'Конвертируйте документы Word в PDF за секунды.',
     allProcessingBrowser: 'Вся обработка происходит в вашем браузере.',
     dragDrop: 'Перетаскивание для легкой загрузки файлов.',
+    remove: 'Удалить',
+    successConvert: 'Успешно конвертировано и загружено!',
+    converting: 'Конвертация',
   },
   ja: {
     openEditor: 'エディターを開く',
@@ -396,7 +410,7 @@ const translations = {
     editPages: 'ページ編集',
     editPagesDesc: '個別のページを数秒で削除または回転できます。',
     convert: '変換',
-    convertDesc: 'PDFを画像に、または画像をPDFに Effortlessに変換できます。',
+    convertDesc: 'PDFを画像に、または画像をPDFに容易に変換できます。',
     mergePdf: 'PDF結合',
     mergePdfDesc: '複数のPDFファイルを1つのドキュメントに結合できます。',
     wordToPdf: 'Word → PDF',
@@ -404,8 +418,8 @@ const translations = {
     browserBased: '100%ブラウザベース — ファイルはデバイスから離れません',
     heroTitle: '必要なPDFツールがすべて揃っています。',
     heroSubtitle: '無料而且ってプライベート。',
-    heroDesc: 'ブラウザで直接PDFファイルを編集、注釈付け、結合、変換、增强できます。アップロード不要。登録不要。制限なし。',
-    startEditing: '編集を始める —  무료입니다',
+    heroDesc: 'ブラウザで直接PDFファイルを編集、注釈付け、結合、変換できます。アップロード不要。登録不要。制限なし。',
+    startEditing: '編集を始める — 免费です',
     allToolsTitle: 'オールインワンPDFツールキット',
     allToolsSubtitle: '5つの強力なツール、1つのシンプルなインターフェース。',
     whyPdfStudio: 'なぜPDF Studioなのか？',
@@ -430,6 +444,9 @@ const translations = {
     convertToPdf: 'Wordドキュメントを数秒でPDFに変換できます。',
     allProcessingBrowser: 'すべての処理はブラウザで行われます。',
     dragDrop: 'ドラッグ＆ドロップで簡単ファイルアップロード。',
+    remove: '削除',
+    successConvert: '正常に変換されてダウンロードされました！',
+    converting: '変換中',
   },
   zh: {
     openEditor: '打开编辑器',
@@ -449,7 +466,7 @@ const translations = {
     browserBased: '100% 基于浏览器 — 您的文件永远不会离开您的设备',
     heroTitle: '您需要的每种PDF工具。',
     heroSubtitle: '免费且私密。',
-    heroDesc: '直接在浏览器中编辑、注释、合并、转换和增强PDF文件。无需上传。无需注册。无限制。',
+    heroDesc: '直接在浏览器中编辑、注释、合并、转换PDF文件。无需上传。无需注册。无限制。',
     startEditing: '开始编辑 — 免费',
     allToolsTitle: '一体化PDF工具包',
     allToolsSubtitle: '五种强大工具，一个简单界面。',
@@ -475,6 +492,9 @@ const translations = {
     convertToPdf: '在几秒钟内将Word文档转换为PDF。',
     allProcessingBrowser: '所有处理都在您的浏览器中进行。',
     dragDrop: '拖放轻松上传文件。',
+    remove: '删除',
+    successConvert: '转换并下载成功！',
+    converting: '转换中',
   },
 } as const;
 
