@@ -1,37 +1,74 @@
 'use client';
 
 import Link from 'next/link';
-import { FileText, ArrowRightLeft, Layers, Type, FileEdit, Shield, Zap, Globe, ArrowRight } from 'lucide-react';
+import { FileText, ArrowRightLeft, Layers, Type, FileEdit, Shield, Zap, Globe, ArrowRight, Sparkles, Lock, Clock, CheckCircle } from 'lucide-react';
 import { LanguageSelector } from '@/lib/i18n/LanguageSelector';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { translations } from '@/lib/i18n/translations';
+import { useState } from 'react';
 
 type TranslationKey = keyof typeof translations.en;
 
 export default function Home() {
   const { t } = useLanguage();
+  const [hoveredTool, setHoveredTool] = useState<string | null>(null);
 
-  const tools: { key: TranslationKey; descKey: TranslationKey; icon: typeof Type; color: string }[] = [
-    { key: 'annotate', descKey: 'annotateDesc', icon: Type, color: 'bg-blue-500' },
-    { key: 'editPages', descKey: 'editPagesDesc', icon: FileEdit, color: 'bg-indigo-500' },
-    { key: 'convert', descKey: 'convertDesc', icon: ArrowRightLeft, color: 'bg-emerald-500' },
-    { key: 'mergePdf', descKey: 'mergePdfDesc', icon: Layers, color: 'bg-orange-500' },
-    { key: 'wordToPdf', descKey: 'wordToPdfDesc', icon: FileText, color: 'bg-purple-500' },
+  const tools: { key: TranslationKey; descKey: TranslationKey; icon: typeof Type; color: string; gradient: string; features: string[] }[] = [
+    { 
+      key: 'annotate', 
+      descKey: 'annotateDesc', 
+      icon: Type, 
+      color: 'bg-blue-500',
+      gradient: 'from-blue-500 to-indigo-600',
+      features: ['Add text & comments', 'Draw & highlight', 'Erase & move elements']
+    },
+    { 
+      key: 'editPages', 
+      descKey: 'editPagesDesc', 
+      icon: FileEdit, 
+      color: 'bg-indigo-500',
+      gradient: 'from-indigo-500 to-purple-600',
+      features: ['Rotate pages', 'Delete pages', 'Reorder pages']
+    },
+    { 
+      key: 'convert', 
+      descKey: 'convertDesc', 
+      icon: ArrowRightLeft, 
+      color: 'bg-emerald-500',
+      gradient: 'from-emerald-500 to-teal-600',
+      features: ['PDF to Images', 'Images to PDF', 'High quality output']
+    },
+    { 
+      key: 'mergePdf', 
+      descKey: 'mergePdfDesc', 
+      icon: Layers, 
+      color: 'bg-orange-500',
+      gradient: 'from-orange-500 to-amber-600',
+      features: ['Combine multiple files', 'Drag to reorder', 'Instant merge']
+    },
+    { 
+      key: 'wordToPdf', 
+      descKey: 'wordToPdfDesc', 
+      icon: FileText, 
+      color: 'bg-purple-500',
+      gradient: 'from-purple-500 to-pink-600',
+      features: ['Preserve formatting', 'Fast conversion', 'Secure processing']
+    },
   ];
 
-  const features: { icon: typeof Shield; titleKey: TranslationKey; descKey: TranslationKey }[] = [
-    { icon: Shield, titleKey: 'privacy', descKey: 'privacyDesc' },
-    { icon: Zap, titleKey: 'fast', descKey: 'fastDesc' },
-    { icon: Globe, titleKey: 'worksEverywhere', descKey: 'worksEverywhereDesc' },
+  const features: { icon: typeof Shield; titleKey: TranslationKey; descKey: TranslationKey; color: string }[] = [
+    { icon: Lock, titleKey: 'privacy', descKey: 'privacyDesc', color: 'bg-blue-100 text-blue-600' },
+    { icon: Zap, titleKey: 'fast', descKey: 'fastDesc', color: 'bg-amber-100 text-amber-600' },
+    { icon: Globe, titleKey: 'worksEverywhere', descKey: 'worksEverywhereDesc', color: 'bg-emerald-100 text-emerald-600' },
   ];
 
   return (
     <div className="min-h-screen bg-white">
       {/* Nav */}
-      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-lg border-b border-gray-100">
+      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="bg-blue-600 p-1.5 sm:p-2 rounded-lg">
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-1.5 sm:p-2 rounded-lg shadow-lg shadow-blue-200">
               <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <span className="text-base sm:text-xl font-bold text-gray-900 tracking-tight">PDF Studio</span>
@@ -40,51 +77,159 @@ export default function Home() {
             <div className="hidden sm:block">
               <LanguageSelector />
             </div>
-            <Link href="/editor" className="px-3 sm:px-5 py-2 sm:py-2.5 bg-blue-600 text-white text-xs sm:text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1 sm:gap-2">
-              {t('openEditor')} <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
+            <Link href="/editor" className="group px-3 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs sm:text-sm font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-200 hover:shadow-xl hover:shadow-blue-300 flex items-center gap-1 sm:gap-2">
+              {t('openEditor')} <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
         </div>
       </nav>
 
       {/* Hero */}
-      <section className="pt-24 sm:pt-32 pb-12 sm:pb-20 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 bg-blue-50 text-blue-700 text-xs sm:text-sm font-medium rounded-full mb-4 sm:mb-6 border border-blue-100">
-            <Shield className="w-3 h-3 sm:w-4 sm:h-4" /> {t('browserBased')}
+      <section className="pt-24 sm:pt-32 pb-16 sm:pb-24 px-4 sm:px-6 relative overflow-hidden">
+        {/* Background decorations */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-100 rounded-full blur-3xl opacity-50" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-100 rounded-full blur-3xl opacity-50" />
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-96 h-96 bg-purple-100 rounded-full blur-3xl opacity-30" />
+        </div>
+        
+        <div className="max-w-4xl mx-auto text-center relative">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 text-xs sm:text-sm font-semibold rounded-full mb-6 sm:mb-8 border border-blue-100 shadow-sm">
+            <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>{t('browserBased')}</span>
           </div>
-          <h1 className="text-3xl sm:text-5xl lg:text-7xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
-            {t('heroTitle')}<br />
-            <span className="text-blue-600">{t('heroSubtitle')}</span>
+          
+          {/* Title */}
+          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-extrabold text-gray-900 tracking-tight leading-[1.1] mb-4 sm:mb-6">
+            <span className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent">
+              {t('heroTitle')}
+            </span>
+            <br />
+            <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              {t('heroSubtitle')}
+            </span>
           </h1>
-          <p className="mt-4 sm:mt-6 text-base sm:text-lg lg:text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed px-2">
+          
+          {/* Description */}
+          <p className="text-base sm:text-lg lg:text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed px-2 mb-8 sm:mb-10">
             {t('heroDesc')}
           </p>
-          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-            <Link href="/editor" className="px-6 sm:px-8 py-3 sm:py-4 bg-blue-600 text-white text-base sm:text-lg font-semibold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 hover:shadow-xl hover:shadow-blue-300 flex items-center justify-center gap-2">
-              {t('startEditing')} <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+          
+          {/* CTA */}
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+            <Link href="/editor" className="group px-7 sm:px-10 py-4 sm:py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-base sm:text-lg font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-xl shadow-blue-300 hover:shadow-2xl hover:shadow-blue-400 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]">
+              <Sparkles className="w-5 h-5" />
+              {t('startEditing')} 
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
+          </div>
+
+          {/* Trust badges */}
+          <div className="mt-8 sm:mt-12 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-gray-400">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-emerald-500" />
+              <span>No signup required</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-emerald-500" />
+              <span>100% Private</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-emerald-500" />
+              <span>Free forever</span>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Tools Grid */}
-      <section className="py-12 sm:py-20 px-4 sm:px-6 bg-gray-50">
+      <section className="py-12 sm:py-20 px-4 sm:px-6 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-8 sm:mb-14">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">{t('allToolsTitle')}</h2>
-            <p className="mt-3 sm:mt-4 text-sm sm:text-lg text-gray-500">{t('allToolsSubtitle')}</p>
+          <div className="text-center mb-10 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4">
+              {t('allToolsTitle')}
+            </h2>
+            <p className="text-base sm:text-lg lg:text-xl text-gray-500">{t('allToolsSubtitle')}</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-8">
             {tools.map((tool) => {
               const Icon = tool.icon;
+              const isHovered = hoveredTool === tool.key;
               return (
-                <Link key={tool.key} href="/editor" className="group bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 lg:p-8 hover:shadow-lg hover:border-blue-200 transition-all">
-                  <div className={`${tool.color} w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-4 sm:mb-5 group-hover:scale-110 transition-transform`}>
-                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                <Link 
+                  key={tool.key} 
+                  href="/editor"
+                  className="group relative"
+                  onMouseEnter={() => setHoveredTool(tool.key)}
+                  onMouseLeave={() => setHoveredTool(null)}
+                >
+                  {/* Card */}
+                  <div className={`
+                    relative bg-white rounded-2xl border-2 p-5 sm:p-6 lg:p-8
+                    transition-all duration-300 ease-out
+                    ${isHovered 
+                      ? 'border-transparent shadow-2xl scale-[1.02]' 
+                      : 'border-gray-100 shadow-sm hover:shadow-lg hover:border-gray-200'
+                    }
+                  `}>
+                    {/* Gradient border effect */}
+                    <div className={`
+                      absolute inset-0 rounded-2xl bg-gradient-to-br ${tool.gradient} opacity-0
+                      transition-opacity duration-300
+                      ${isHovered ? 'opacity-100' : ''}
+                    `} />
+                    <div className="absolute inset-[1px] rounded-2xl bg-white" />
+                    
+                    {/* Content */}
+                    <div className="relative">
+                      {/* Icon */}
+                      <div className={`
+                        w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center mb-5 sm:mb-6
+                        bg-gradient-to-br ${tool.gradient} shadow-lg
+                        transition-transform duration-300
+                        ${isHovered ? 'scale-110 rotate-3' : ''}
+                      `}>
+                        <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                      </div>
+                      
+                      {/* Title */}
+                      <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-2 sm:mb-3 group-hover:text-gray-800 transition-colors">
+                        {t(tool.key)}
+                      </h3>
+                      
+                      {/* Description */}
+                      <p className="text-gray-500 text-sm sm:text-base leading-relaxed mb-4 sm:mb-5">
+                        {t(tool.descKey)}
+                      </p>
+                      
+                      {/* Features (show on hover) */}
+                      <div className={`
+                        space-y-2 transition-all duration-300
+                        ${isHovered ? 'opacity-100 max-h-20' : 'opacity-0 max-h-0 overflow-hidden'}
+                      `}>
+                        {tool.features.map((feature, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+                            <div className={`w-1.5 h-1.5 rounded-full bg-gradient-to-br ${tool.gradient}`} />
+                            <span>{feature}</span>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Hover arrow */}
+                      <div className={`
+                        absolute -right-1 -top-1 sm:-right-2 sm:-top-2
+                        w-8 h-8 sm:w-10 sm:h-10 rounded-full 
+                        bg-gradient-to-br ${tool.gradient} shadow-lg
+                        flex items-center justify-center
+                        transition-all duration-300
+                        ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}
+                      `}>
+                        <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="text-base sm:text-xl font-bold text-gray-900 mb-1 sm:mb-2">{t(tool.key)}</h3>
-                  <p className="text-gray-500 text-xs sm:text-sm leading-relaxed">{t(tool.descKey)}</p>
                 </Link>
               );
             })}
@@ -93,21 +238,36 @@ export default function Home() {
       </section>
 
       {/* Features */}
-      <section className="py-12 sm:py-20 px-4 sm:px-6">
+      <section className="py-16 sm:py-24 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-8 sm:mb-14">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">{t('whyPdfStudio')}</h2>
+          <div className="text-center mb-10 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4">
+              {t('whyPdfStudio')}
+            </h2>
           </div>
+          
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
-            {features.map((f) => {
+            {features.map((f, index) => {
               const Icon = f.icon;
               return (
-                <div key={f.titleKey} className="text-center">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-5">
-                    <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" />
+                <div 
+                  key={f.titleKey} 
+                  className="group relative bg-white rounded-2xl border border-gray-100 p-6 sm:p-8 text-center hover:shadow-xl hover:border-gray-200 transition-all duration-300"
+                >
+                  {/* Icon */}
+                  <div className={`w-14 h-14 sm:w-16 sm:h-16 ${f.color} rounded-2xl flex items-center justify-center mx-auto mb-5 sm:mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                    <Icon className="w-7 h-7 sm:w-8 sm:h-8" />
                   </div>
-                  <h3 className="text-base sm:text-xl font-bold text-gray-900 mb-1 sm:mb-2">{t(f.titleKey)}</h3>
-                  <p className="text-gray-500 text-xs sm:text-sm leading-relaxed">{t(f.descKey)}</p>
+                  
+                  {/* Title */}
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-2 sm:mb-3">
+                    {t(f.titleKey)}
+                  </h3>
+                  
+                  {/* Description */}
+                  <p className="text-gray-500 text-sm sm:text-base leading-relaxed">
+                    {t(f.descKey)}
+                  </p>
                 </div>
               );
             })}
@@ -116,21 +276,33 @@ export default function Home() {
       </section>
 
       {/* CTA */}
-      <section className="py-12 sm:py-20 px-4 sm:px-6 bg-gray-900">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 sm:mb-4">{t('ctaTitle')}</h2>
-          <p className="text-gray-400 text-sm sm:text-lg mb-6 sm:mb-8">{t('ctaDesc')}</p>
-          <Link href="/editor" className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-blue-600 text-white text-base sm:text-lg font-semibold rounded-xl hover:bg-blue-700 transition-all shadow-lg">
-            {t('openEditor')} <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+      <section className="py-16 sm:py-24 px-4 sm:px-6 bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 relative overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl" />
+        </div>
+        
+        <div className="max-w-3xl mx-auto text-center relative">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6">
+            {t('ctaTitle')}
+          </h2>
+          <p className="text-gray-400 text-base sm:text-lg lg:text-xl mb-8 sm:mb-10 max-w-xl mx-auto">
+            {t('ctaDesc')}
+          </p>
+          <Link href="/editor" className="group inline-flex items-center gap-3 px-8 sm:px-10 py-4 sm:py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-base sm:text-lg font-bold rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all shadow-2xl shadow-blue-900/50 hover:shadow-blue-800/50 hover:scale-[1.02] active:scale-[0.98]">
+            <Clock className="w-5 h-5" />
+            {t('openEditor')} 
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-8 sm:py-10 px-4 sm:px-6 border-t border-gray-100">
+      <footer className="py-8 sm:py-10 px-4 sm:px-6 border-t border-gray-100 bg-white">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-2">
-            <div className="bg-blue-600 p-1.5 rounded-md">
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-1.5 rounded-md shadow-sm">
               <FileText className="w-4 h-4 text-white" />
             </div>
             <span className="text-sm font-semibold text-gray-700">PDF Studio</span>
