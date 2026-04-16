@@ -4,69 +4,580 @@ import React, { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { FileText, Download, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import mammoth from 'mammoth';
-import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
-// Turkish character replacements for StandardFonts fallback
-const TURKISH_MAP: Record<string, string> = {
-  'İ': 'I', 'ı': 'i',
-  'Ş': 'S', 'ş': 's',
-  'Ğ': 'G', 'ğ': 'g',
-  'Ü': 'U', 'ü': 'u',
-  'Ö': 'O', 'ö': 'o',
-  'Ç': 'C', 'ç': 'c',
-  '€': 'EUR', '£': 'GBP', '¥': 'JPY', '₺': 'TL',
+// ─── HTML Parser & Styled Text ─────────────────────────────────────────────
+
+type TextStyle = {
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  fontSize?: number;
+  color?: string;
+  fontFamily?: string;
 };
 
-function stripHtml(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<\/h[1-6]>/gi, '\n\n')
-    .replace(/<\/li>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
+type DocNode = 
+  | { type: 'text'; content: string; style: TextStyle }
+  | { type: 'inline'; tag: string; children: DocNode[]; style: TextStyle }
+  | { type: 'block'; tag: string; children: DocNode[]; style: TextStyle }
+  | { type: 'table'; rows: DocNode[][] };
+
+function decodeHtmlEntities(text: string): string {
+  return text
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&[a-z]+;/gi, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+    .replace(/&[a-z]+;/gi, '');
 }
 
-function getLines(html: string): string[] {
-  return stripHtml(html).split('\n').filter(line => line.trim().length > 0);
-}
+function parseInlineHtml(html: string, baseStyle: TextStyle = {}): DocNode[] {
+  const nodes: DocNode[] = [];
+  
+  // Regex to match HTML tags
+  const tagRegex = /<(\/?)([\w]+)([^>]*)>/gi;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let currentStyle = { ...baseStyle };
+  const stack: { tag: string; style: TextStyle }[] = [];
 
-// Replace Turkish chars with ASCII for StandardFonts
-function normalizeTurkish(text: string): string {
-  let result = text;
-  for (const [turkish, ascii] of Object.entries(TURKISH_MAP)) {
-    result = result.replace(new RegExp(turkish, 'g'), ascii);
-  }
-  return result;
-}
+  // Get text content without the outer wrapping tags we don't want
+  const cleanHtml = html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/h[1-6]>/gi, '\n\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<\/table>/gi, '\n')
+    .replace(/<\/tr>/gi, '\n')
+    .replace(/<\/div>/gi, '\n');
 
-// Load a font from Google Fonts that supports Turkish
-async function loadTurkishFont(): Promise<any | null> {
-  try {
-    // Roboto supports Turkish
-    const response = await fetch(
-      'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Me5Q.ttf',
-      { signal: AbortSignal.timeout(5000) }
-    );
-    if (!response.ok) return null;
-    const fontBytes = await response.arrayBuffer();
+  const segments: { text: string; style: TextStyle }[] = [];
+  
+  // Split by tags, keeping tags in the result
+  const parts = cleanHtml.split(/(<[^>]+>)/gi);
+  
+  let activeStyle = { ...baseStyle };
+  
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
     
-    // We'll load font dynamically in the browser
-    // But for now, return null to use fallback
-    return null;
-  } catch {
-    return null;
+    if (trimmed.startsWith('<') && trimmed.endsWith('>')) {
+      // It's a tag
+      const isClose = trimmed.startsWith('</');
+      const tagName = trimmed.replace(/<\/?|>/gi, '').split(/\s/)[0].toLowerCase();
+      
+      if (isClose) {
+        // Pop from stack
+        const popped = stack.pop();
+        if (popped) {
+          activeStyle = { ...baseStyle };
+          for (const item of stack) {
+            Object.assign(activeStyle, item.style);
+          }
+        }
+      } else {
+        // Push to stack
+        const newStyle: TextStyle = {};
+        if (tagName === 'strong' || tagName === 'b') newStyle.bold = true;
+        if (tagName === 'em' || tagName === 'i') newStyle.italic = true;
+        if (tagName === 'u') newStyle.underline = true;
+        
+        // Handle inline style attribute
+        const styleMatch = trimmed.match(/style=["']([^"']+)["']/i);
+        if (styleMatch) {
+          const styles = styleMatch[1].split(';');
+          for (const s of styles) {
+            const [prop, val] = s.split(':').map(x => x.trim());
+            if (prop === 'font-size') {
+              const size = parseInt(val);
+              if (!isNaN(size)) newStyle.fontSize = size;
+            }
+            if (prop === 'color') newStyle.color = val;
+            if (prop === 'font-family') newStyle.fontFamily = val;
+          }
+        }
+        
+        stack.push({ tag: tagName, style: newStyle });
+        activeStyle = { ...baseStyle, ...newStyle };
+      }
+    } else {
+      // It's text content
+      const text = decodeHtmlEntities(trimmed);
+      if (text) {
+        segments.push({ text, style: { ...activeStyle } });
+      }
+    }
   }
+
+  // Merge consecutive segments with same style
+  for (const seg of segments) {
+    if (nodes.length > 0) {
+      const last = nodes[nodes.length - 1];
+      if (last.type === 'text' && 
+          JSON.stringify(last.style) === JSON.stringify(seg.style)) {
+        (last as any).content += seg.text;
+        continue;
+      }
+    }
+    nodes.push({ type: 'text', content: seg.text, style: seg.style });
+  }
+
+  return nodes;
 }
+
+// Simple HTML tag stripper for debugging
+function stripAllHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, '').trim();
+}
+
+// Parse HTML into block-level nodes
+function parseHtml(html: string): DocNode[] {
+  const blocks: DocNode[] = [];
+  
+  // Remove XML declaration and DOCTYPE if present
+  const cleanHtml = html
+    .replace(/<\?xml[^>]*\?>/gi, '')
+    .replace(/<!DOCTYPE[^>]*>/gi, '')
+    .replace(/<html[^>]*>/gi, '')
+    .replace(/<\/html>/gi, '')
+    .replace(/<body[^>]*>/gi, '')
+    .replace(/<\/body>/gi, '');
+
+  // Split by block-level tags
+  const blockRegex = /<(table|thead|tbody|tfoot|tr|h[1-6]|p|div|ul|ol|li)([^>]*)>([\s\S]*?)<\/\1>/gi;
+  
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = blockRegex.exec(cleanHtml)) !== null) {
+    const fullMatch = match[0];
+    const tag = match[1].toLowerCase();
+    const inner = match[3];
+
+    // Add any text before this block as a paragraph
+    const before = cleanHtml.substring(lastIndex, match.index).trim();
+    if (before) {
+      blocks.push({
+        type: 'block',
+        tag: 'p',
+        children: parseInlineHtml(before),
+        style: {},
+      });
+    }
+
+    if (tag === 'table') {
+      const rows: DocNode[][] = [];
+      
+      // Parse rows
+      const rowRegex = /<tr([^>]*)>([\s\S]*?)<\/tr>/gi;
+      let rowMatch: RegExpExecArray | null;
+      
+      while ((rowMatch = rowRegex.exec(fullMatch)) !== null) {
+        const cells: DocNode[] = [];
+        
+        // Check if it's a header row
+        const isHeader = rowMatch[1].includes('th') || 
+          rowMatch[2].includes('<th');
+        
+        // Parse cells
+        const cellRegex = /<(t[hd])([^>]*)>([\s\S]*?)<\/\1>/gi;
+        let cellMatch: RegExpExecArray | null;
+        
+        while ((cellMatch = cellRegex.exec(rowMatch[2])) !== null) {
+          const cellTag = cellMatch[1];
+          const cellInner = cellMatch[3];
+          const cellStyle: TextStyle = cellTag === 'th' 
+            ? { bold: true, fontSize: 11 } 
+            : { fontSize: 11 };
+          
+          cells.push({
+            type: 'inline',
+            tag: cellTag,
+            children: parseInlineHtml(cellInner, cellStyle),
+            style: cellStyle,
+          });
+        }
+        
+        if (cells.length > 0) {
+          rows.push(cells);
+        }
+      }
+      
+      if (rows.length > 0) {
+        blocks.push({ type: 'table', rows });
+      }
+    } else if (tag.match(/^h[1-6]$/)) {
+      const level = parseInt(tag[1]);
+      const fontSize = level === 1 ? 22 : level === 2 ? 18 : level === 3 ? 15 : 13;
+      blocks.push({
+        type: 'block',
+        tag,
+        children: parseInlineHtml(inner, { bold: true, fontSize }),
+        style: { bold: true, fontSize },
+      });
+    } else if (tag === 'p' || tag === 'div') {
+      const children = parseInlineHtml(inner);
+      if (children.length > 0) {
+        blocks.push({
+          type: 'block',
+          tag,
+          children,
+          style: {},
+        });
+      }
+    } else if (tag === 'ul' || tag === 'ol') {
+      // Parse list items
+      const itemRegex = /<li([^>]*)>([\s\S]*?)<\/li>/gi;
+      let itemMatch: RegExpExecArray | null;
+      
+      while ((itemMatch = itemRegex.exec(fullMatch)) !== null) {
+        const bullet = tag === 'ul' ? '• ' : '1. ';
+        blocks.push({
+          type: 'block',
+          tag: 'li',
+          children: [
+            { type: 'text', content: bullet, style: { bold: false } },
+            ...parseInlineHtml(itemMatch[2]),
+          ],
+          style: {},
+        });
+      }
+    }
+    
+    lastIndex = match.index + fullMatch.length;
+  }
+
+  // Any remaining text
+  const after = cleanHtml.substring(lastIndex).trim();
+  if (after) {
+    blocks.push({
+      type: 'block',
+      tag: 'p',
+      children: parseInlineHtml(after),
+      style: {},
+    });
+  }
+
+  const blockNodes = blocks.filter((b): b is { type: 'block'; tag: string; children: DocNode[]; style: TextStyle } =>
+    b.type === 'block'
+  );
+  return blockNodes.filter(b => b.children && b.children.length > 0);
+}
+
+// ─── PDF Renderer ───────────────────────────────────────────────────────────
+
+async function createPdfFromDocx(
+  arrayBuffer: ArrayBuffer,
+  fileName: string,
+  onProgress?: (status: string) => void
+): Promise<Blob> {
+  onProgress?.('Parsing document...');
+  
+  // Step 1: Convert DOCX to HTML via mammoth
+  const mammothResult = await mammoth.convertToHtml({ arrayBuffer });
+  const html = mammothResult.value;
+  
+  if (mammothResult.messages.length > 0) {
+    console.warn('Mammoth warnings:', mammothResult.messages);
+  }
+
+  onProgress?.('Building PDF structure...');
+
+  // Step 2: Parse HTML into structured nodes
+  const nodes = parseHtml(html);
+
+  if (nodes.length === 0) {
+    throw new Error('No content found in the document.');
+  }
+
+  // Step 3: Create PDF with pdf-lib
+  const pdfDoc = await PDFDocument.create();
+  
+  // Load Roboto fonts from Google Fonts (supports Turkish and all Unicode)
+  let regularFont: any, boldFont: any, italicFont: any, boldItalicFont: any;
+  
+  try {
+    onProgress?.('Loading fonts...');
+    
+    // Roboto Regular
+    const regResp = await fetch(
+      'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Me5Q.ttf',
+      { signal: AbortSignal.timeout(8000) }
+    );
+    // Roboto Bold
+    const boldResp = await fetch(
+      'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmEU9Vdw.ttf',
+      { signal: AbortSignal.timeout(8000) }
+    );
+    // Roboto Italic
+    const italResp = await fetch(
+      'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1Me5Q.ttf',
+      { signal: AbortSignal.timeout(8000) }
+    );
+    // Roboto Bold Italic
+    const boldItResp = await fetch(
+      'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1Me5Q.ttf',
+      { signal: AbortSignal.timeout(8000) }
+    );
+
+    if (regResp.ok && boldResp.ok) {
+      regularFont = await pdfDoc.embedFont(await regResp.arrayBuffer());
+      boldFont = await pdfDoc.embedFont(await boldResp.arrayBuffer());
+      italicFont = await pdfDoc.embedFont(await italResp.arrayBuffer());
+      boldItalicFont = await pdfDoc.embedFont(await boldItResp.arrayBuffer());
+      onProgress?.('Rendering content...');
+    } else {
+      throw new Error('Font load failed');
+    }
+  } catch {
+    // Fallback to built-in fonts (no Turkish support)
+    regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    italicFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    boldItalicFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  }
+
+  // Page dimensions (A4 in points)
+  const PAGE_WIDTH = 595.28;
+  const PAGE_HEIGHT = 841.89;
+  const MARGIN = 50;
+  const MAX_WIDTH = PAGE_WIDTH - 2 * MARGIN;
+
+  let currentPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  let y = PAGE_HEIGHT - MARGIN;
+
+  // Helper to get font based on style
+  function getFont(style: TextStyle): any {
+    if (style.bold && style.italic) return boldItalicFont || boldFont;
+    if (style.bold) return boldFont;
+    if (style.italic) return italicFont;
+    return regularFont;
+  }
+
+  // Helper to wrap text into lines
+  function wrapText(text: string, maxWidth: number, font: any, size: number): string[] {
+    if (!text.trim()) return [''];
+    
+    const lines: string[] = [];
+    const paragraphs = text.split('\n');
+    
+    for (const para of paragraphs) {
+      if (!para.trim()) {
+        lines.push('');
+        continue;
+      }
+      
+      const words = para.split(/\s+/);
+      let currentLine = '';
+      
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        const testWidth = font.widthOfTextAtSize(testLine, size);
+        
+        if (testWidth > maxWidth && currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          currentLine = testLine;
+        }
+      }
+      
+      if (currentLine) lines.push(currentLine);
+    }
+    
+    return lines;
+  }
+
+  // Draw a text node at current cursor position, handle overflow
+  function drawStyledText(children: DocNode[], startX: number): number {
+    let x = startX;
+    
+    for (const child of children) {
+      if (child.type === 'text') {
+        const style = child.style;
+        const font = getFont(style);
+        const size = style.fontSize || 11;
+        const text = child.content;
+        
+        const lines = wrapText(text, MAX_WIDTH - (x - MARGIN), font, size);
+        
+        for (let i = 0; i < lines.length; i++) {
+          if (y < MARGIN + size) {
+            currentPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+            y = PAGE_HEIGHT - MARGIN;
+          }
+          
+          if (lines[i]) {
+            try {
+              currentPage.drawText(lines[i], {
+                x,
+                y,
+                size,
+                font,
+              });
+            } catch {
+              // Skip problematic characters
+            }
+          }
+          y -= size + 4;
+        }
+        x = startX;
+      }
+    }
+    
+    return y;
+  }
+
+  // Draw a table
+  function drawTable(table: { rows: DocNode[][] }) {
+    if (table.rows.length === 0) return;
+    
+    const CELL_PADDING = 6;
+    const LINE_HEIGHT = 12;
+    const FONT_SIZE = 10;
+    
+    // Calculate column widths based on content
+    const colCount = Math.max(...table.rows.map(r => r.length));
+    const colWidth = (MAX_WIDTH - CELL_PADDING * 2) / colCount;
+    
+    for (const row of table.rows) {
+      // First pass: measure content height for each cell
+      const cellHeights: number[] = [];
+      
+      for (let col = 0; col < Math.min(row.length, colCount); col++) {
+        const cell = row[col] as { type: 'inline'; tag: string; children: DocNode[]; style: TextStyle };
+        let totalText = '';
+        
+        if (cell.type === 'inline') {
+          for (const child of cell.children) {
+            if (child.type === 'text') totalText += child.content;
+          }
+        }
+        
+        const font = getFont(cell.style);
+        const lines = wrapText(totalText, colWidth - CELL_PADDING * 2, font, cell.style.fontSize || FONT_SIZE);
+        cellHeights.push(lines.length * LINE_HEIGHT + CELL_PADDING * 2);
+      }
+      
+      const rowHeight = Math.max(...cellHeights, LINE_HEIGHT + CELL_PADDING * 2);
+      
+      // Check if we need a new page
+      if (y < MARGIN + rowHeight) {
+        currentPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+        y = PAGE_HEIGHT - MARGIN;
+      }
+      
+      const rowY = y;
+      
+      // Draw cells
+      let x = MARGIN;
+      for (let col = 0; col < Math.min(row.length, colCount); col++) {
+        const cell = row[col] as { type: 'inline'; tag: string; children: DocNode[]; style: TextStyle };
+        const cellWidth = colWidth;
+        
+        // Draw cell border
+        currentPage.drawRectangle({
+          x,
+          y: rowY - rowHeight,
+          width: cellWidth,
+          height: rowHeight,
+          borderColor: rgb(0.5, 0.5, 0.5),
+          borderWidth: 0.5,
+        });
+        
+        // Draw cell content
+        let cellText = '';
+        if (cell.type === 'inline') {
+          for (const child of cell.children) {
+            if (child.type === 'text') cellText += child.content;
+          }
+        }
+        
+        if (cellText) {
+          const font = getFont(cell.style);
+          const size = cell.style.fontSize || FONT_SIZE;
+          const lines = wrapText(cellText, cellWidth - CELL_PADDING * 2, font, size);
+          
+          let textY = rowY - CELL_PADDING - size;
+          for (const line of lines) {
+            if (textY < rowY - rowHeight + CELL_PADDING) break;
+            try {
+              currentPage.drawText(line, {
+                x: x + CELL_PADDING,
+                y: textY,
+                size,
+                font,
+              });
+            } catch {}
+            textY -= LINE_HEIGHT;
+          }
+        }
+        
+        x += cellWidth;
+      }
+      
+      y -= rowHeight;
+    }
+    
+    y -= 10; // Space after table
+  }
+
+  // Draw a block element
+  function drawBlock(node: DocNode) {
+    if (node.type === 'table') {
+      drawTable(node);
+      return;
+    }
+    
+    if (node.type !== 'block') return;
+
+    const tag = node.tag;
+    const children = node.children;
+    const style = node.style || {};
+    const size = style.fontSize || 11;
+
+    if (tag === 'li') {
+      // List item
+      const indent = 20;
+      drawStyledText(children, MARGIN + indent);
+      y -= 4;
+    } else if (tag.match(/^h[1-6]$/)) {
+      // Heading
+      if (y < MARGIN + size + 10) {
+        currentPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+        y = PAGE_HEIGHT - MARGIN;
+      }
+      drawStyledText(children, MARGIN);
+      y -= size + 8;
+    } else {
+      // Paragraph or other block
+      drawStyledText(children, MARGIN);
+      y -= 8;
+    }
+  }
+
+  // Render all blocks
+  for (const node of nodes) {
+    if (y < MARGIN + 20) {
+      currentPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      y = PAGE_HEIGHT - MARGIN;
+    }
+    
+    drawBlock(node);
+  }
+
+  onProgress?.('Saving PDF...');
+  const pdfBytes = await pdfDoc.save();
+  return new Blob([pdfBytes], { type: 'application/pdf' });
+}
+
+// ─── React Component ────────────────────────────────────────────────────────
 
 export function WordToPdf() {
   const { t } = useLanguage();
@@ -74,6 +585,7 @@ export function WordToPdf() {
   const [converting, setConverting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [progress, setProgress] = useState<string>('');
 
   const onDrop = (acceptedFiles: File[]) => {
     const selectedFile = acceptedFiles[0];
@@ -95,164 +607,32 @@ export function WordToPdf() {
     setConverting(true);
     setError(null);
     setSuccess(false);
+    setProgress('');
 
     try {
-      // Step 1: Read DOCX and convert to HTML via mammoth
       const arrayBuffer = await file.arrayBuffer();
-      const mammothResult = await mammoth.convertToHtml({ arrayBuffer });
-      const html = mammothResult.value;
-
-      if (mammothResult.messages && mammothResult.messages.length > 0) {
-        console.warn('Mammoth warnings:', mammothResult.messages);
-      }
-
-      // Step 2: Extract plain text lines
-      const lines = getLines(html);
-
-      if (lines.length === 0) {
-        throw new Error('No text content found in the document.');
-      }
-
-      // Step 3: Create PDF with pdf-lib
-      const pdfDoc = await PDFDocument.create();
       
-      // Try to load a Unicode-capable font
-      let font: any;
-      let boldFont: any;
+      const blob = await createPdfFromDocx(
+        arrayBuffer,
+        file.name,
+        (status) => setProgress(status)
+      );
       
-      try {
-        // Try to load Roboto Bold from Google Fonts
-        const fontResponse = await fetch(
-          'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlvFw.ttf',
-          { signal: AbortSignal.timeout(5000) }
-        );
-        if (fontResponse.ok) {
-          const fontBytes = await fontResponse.arrayBuffer();
-          font = await pdfDoc.embedFont(fontBytes);
-          
-          const boldResponse = await fetch(
-            'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmEU9Vdw.ttf',
-            { signal: AbortSignal.timeout(5000) }
-          );
-          if (boldResponse.ok) {
-            const boldBytes = await boldResponse.arrayBuffer();
-            boldFont = await pdfDoc.embedFont(boldBytes);
-          } else {
-            boldFont = font;
-          }
-        } else {
-          throw new Error('Font load failed');
-        }
-      } catch {
-        // Fallback: use StandardFonts (with Turkish char replacement)
-        const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
-        const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-        font = helvetica;
-        boldFont = helveticaBold;
-      }
-
-      // A4 dimensions in points
-      const PAGE_WIDTH = 595.28;
-      const PAGE_HEIGHT = 841.89;
-      const MARGIN = 50;
-      const LINE_HEIGHT = 14;
-      const FONT_SIZE = 11;
-      const MAX_WIDTH = PAGE_WIDTH - 2 * MARGIN;
-
-      let currentPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-      let y = PAGE_HEIGHT - MARGIN;
-
-      // Helper to draw text, handling both Unicode and StandardFonts
-      const drawText = (text: string, x: number, yPos: number, size: number, currentFont: any) => {
-        try {
-          currentPage.drawText(text, {
-            x,
-            y: yPos,
-            size,
-            font: currentFont,
-          });
-        } catch (err: any) {
-          // If font encoding fails (non-Latin chars), normalize and retry once
-          const normalized = normalizeTurkish(text);
-          currentPage.drawText(normalized, {
-            x,
-            y: yPos,
-            size,
-            font: currentFont,
-          });
-        }
-      };
-
-      for (let i = 0; i < lines.length; i++) {
-        const rawLine = lines[i];
-        
-        // Check if this line is a heading
-        const isHeading = rawLine.startsWith('#') || 
-          (rawLine.length < 60 && rawLine === rawLine.toUpperCase() && /[A-Z]/.test(rawLine));
-        
-        const currentFont = isHeading ? boldFont : font;
-        const size = isHeading ? FONT_SIZE + 4 : FONT_SIZE;
-        const lh = isHeading ? LINE_HEIGHT * 1.5 : LINE_HEIGHT;
-
-        // Word wrap long lines
-        const words = rawLine.split(/\s+/);
-        let currentLine = '';
-        let usedFont = currentFont;
-
-        for (const word of words) {
-          const testLine = currentLine ? `${currentLine} ${word}` : word;
-          
-          let testWidth: number;
-          try {
-            testWidth = usedFont.widthOfTextAtSize(testLine, size);
-          } catch {
-            // Fallback width estimation
-            testWidth = usedFont.widthOfTextAtSize(normalizeTurkish(testLine), size);
-          }
-
-          if (testWidth > MAX_WIDTH && currentLine) {
-            if (y < MARGIN + lh) {
-              currentPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-              y = PAGE_HEIGHT - MARGIN;
-            }
-            drawText(currentLine, MARGIN, y, size, usedFont);
-            y -= lh;
-            currentLine = word;
-          } else {
-            currentLine = testLine;
-          }
-        }
-
-        // Draw remaining text
-        if (currentLine) {
-          if (y < MARGIN + lh) {
-            currentPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-            y = PAGE_HEIGHT - MARGIN;
-          }
-          drawText(currentLine, MARGIN, y, size, usedFont);
-          y -= lh;
-        }
-      }
-
-      // Step 4: Save and download
-      const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
-
       const link = document.createElement('a');
       link.href = url;
       link.download = `${file.name.replace(/\.docx$/i, '')}.pdf`;
       link.click();
-
       URL.revokeObjectURL(url);
+      
       setSuccess(true);
       setFile(null);
-
     } catch (err: any) {
       console.error('Conversion error:', err);
       setError(err.message || 'An error occurred during conversion.');
     } finally {
       setConverting(false);
+      setProgress('');
     }
   };
 
@@ -309,6 +689,13 @@ export function WordToPdf() {
               <div className="flex items-center gap-3 p-4 bg-green-50 text-green-700 rounded-xl border border-green-100">
                 <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
                 <p className="text-sm font-medium">{t('successConvert') || 'Successfully converted and downloaded!'}</p>
+              </div>
+            )}
+
+            {converting && progress && (
+              <div className="text-center text-sm text-gray-500 py-2">
+                <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                {progress}
               </div>
             )}
 
