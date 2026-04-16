@@ -1,17 +1,236 @@
 'use client';
 
 import Link from 'next/link';
-import { FileText, ArrowRightLeft, Layers, Type, FileEdit, Shield, Zap, Globe, ArrowRight, Sparkles, Lock, Clock, CheckCircle } from 'lucide-react';
+import { FileText, ArrowRightLeft, Layers, Type, FileEdit, Shield, Zap, Globe, ArrowRight, Sparkles, Lock, Clock, CheckCircle, Star, ChevronDown, ChevronUp, Users, Zap as ZapIcon, Crown } from 'lucide-react';
 import { LanguageSelector } from '@/lib/i18n/LanguageSelector';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { translations } from '@/lib/i18n/translations';
 import { useState } from 'react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ToolPreview } from '@/components/ToolPreview';
+import { cn } from '@/lib/utils';
 
 type TranslationKey = keyof typeof translations.en;
 
 type ToolPreviewType = 'annotate' | 'edit' | 'convert' | 'merge' | 'word-to-pdf' | 'security' | 'batch';
+
+// Floating PDF Mockup Component
+function FloatingPdfMockup() {
+  return (
+    <div className="relative w-full max-w-2xl mx-auto mt-12 perspective-1000">
+      {/* Main floating document */}
+      <div className="relative animate-float-slow">
+        {/* Document shadow */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900/20 to-indigo-900/20 rounded-2xl blur-xl transform translate-y-4" />
+        
+        {/* Main PDF */}
+        <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          {/* PDF Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center gap-3">
+            <div className="flex gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-red-400" />
+              <div className="w-3 h-3 rounded-full bg-yellow-400" />
+              <div className="w-3 h-3 rounded-full bg-green-400" />
+            </div>
+            <span className="text-white/80 text-sm font-medium ml-2">document.pdf</span>
+          </div>
+          
+          {/* PDF Content */}
+          <div className="p-6 space-y-4">
+            {/* Lines representing text */}
+            <div className="space-y-2">
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6" />
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-4/6" />
+            </div>
+            
+            {/* Highlighted annotation */}
+            <div className="bg-yellow-200/60 dark:bg-yellow-500/20 h-8 rounded-lg flex items-center px-3">
+              <span className="text-sm text-gray-700 dark:text-gray-300">Important annotation here</span>
+            </div>
+            
+            {/* More text */}
+            <div className="space-y-2">
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+            </div>
+            
+            {/* Image placeholder */}
+            <div className="bg-blue-100 dark:bg-blue-900/30 rounded-lg h-24 flex items-center justify-center">
+              <div className="bg-gray-300 dark:bg-gray-600 rounded-lg w-16 h-16 flex items-center justify-center">
+                <FileText className="w-8 h-8 text-gray-500 dark:text-gray-400" />
+              </div>
+            </div>
+          </div>
+          
+          {/* Toolbar overlay */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+              <Type className="w-4 h-4 text-blue-600" />
+            </div>
+            <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <FileEdit className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+            </div>
+            <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <Shield className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+            </div>
+          </div>
+        </div>
+        
+        {/* Floating tooltips */}
+        <div className="absolute -right-8 top-1/4 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 px-3 py-2 animate-float-right hidden lg:block">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+            </div>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Encrypted</span>
+          </div>
+        </div>
+        
+        <div className="absolute -left-8 top-1/3 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 px-3 py-2 animate-float-left hidden lg:block">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+              <Zap className="w-4 h-4 text-blue-600" />
+            </div>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Instant save</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Testimonial Card
+function TestimonialCard({ name, role, content, avatar, rating }: { name: string; role: string; content: string; avatar: string; rating: number }) {
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6 hover:shadow-xl hover:border-gray-200 dark:hover:border-gray-700 transition-all duration-300">
+      {/* Rating */}
+      <div className="flex gap-1 mb-4">
+        {[...Array(5)].map((_, i) => (
+          <Star key={i} className={cn("w-4 h-4", i < rating ? "text-amber-400 fill-amber-400" : "text-gray-300 dark:text-gray-600")} />
+        ))}
+      </div>
+      
+      {/* Content */}
+      <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">"{content}"</p>
+      
+      {/* Author */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+          {avatar}
+        </div>
+        <div>
+          <p className="font-semibold text-gray-900 dark:text-white text-sm">{name}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{role}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Pricing Card
+function PricingCard({ name, price, features, highlighted, icon: Icon }: { name: string; price: string; features: string[]; highlighted?: boolean; icon: typeof Crown }) {
+  return (
+    <div className={cn(
+      "relative rounded-2xl p-8 transition-all duration-300",
+      highlighted 
+        ? "bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-2xl shadow-blue-500/30 scale-105" 
+        : "bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:border-gray-200 dark:hover:border-gray-700"
+    )}>
+      {highlighted && (
+        <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-xs font-bold px-4 py-1 rounded-full">
+          Most Popular
+        </div>
+      )}
+      
+      <div className={cn(
+        "w-12 h-12 rounded-xl flex items-center justify-center mb-4",
+        highlighted ? "bg-white/20" : "bg-blue-100 dark:bg-blue-900/40"
+      )}>
+        <Icon className={cn("w-6 h-6", highlighted ? "text-white" : "text-blue-600 dark:text-blue-400")} />
+      </div>
+      
+      <h3 className={cn(
+        "text-xl font-bold mb-2",
+        highlighted ? "text-white" : "text-gray-900 dark:text-white"
+      )}>
+        {name}
+      </h3>
+      
+      <div className="mb-6">
+        <span className={cn(
+          "text-4xl font-extrabold",
+          highlighted ? "text-white" : "text-gray-900 dark:text-white"
+        )}>
+          {price}
+        </span>
+        {price !== "Free" && (
+          <span className={cn(
+            "text-sm",
+            highlighted ? "text-white/70" : "text-gray-500 dark:text-gray-400"
+          )}>
+            /month
+          </span>
+        )}
+      </div>
+      
+      <ul className="space-y-3 mb-8">
+        {features.map((feature, i) => (
+          <li key={i} className="flex items-center gap-3">
+            <CheckCircle className={cn(
+              "w-5 h-5 flex-shrink-0",
+              highlighted ? "text-white/80" : "text-emerald-500 dark:text-emerald-400"
+            )} />
+            <span className={cn(
+              "text-sm",
+              highlighted ? "text-white/90" : "text-gray-600 dark:text-gray-300"
+            )}>
+              {feature}
+            </span>
+          </li>
+        ))}
+      </ul>
+      
+      <Link
+        href="/editor"
+        className={cn(
+          "block w-full py-3 px-6 rounded-xl font-semibold text-center transition-all",
+          highlighted 
+            ? "bg-white text-blue-600 hover:bg-gray-100" 
+            : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500"
+        )}
+      >
+        {highlighted ? "Get Started" : "Start Free"}
+      </Link>
+    </div>
+  );
+}
+
+// FAQ Item
+function FAQItem({ question, answer }: { question: string; answer: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  return (
+    <div className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full py-5 flex items-center justify-between text-left"
+      >
+        <span className="font-semibold text-gray-900 dark:text-white pr-4">{question}</span>
+        {isOpen ? (
+          <ChevronUp className="w-5 h-5 text-gray-400 flex-shrink-0" />
+        ) : (
+          <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" />
+        )}
+      </button>
+      {isOpen && (
+        <div className="pb-5 text-gray-500 dark:text-gray-400 leading-relaxed">
+          {answer}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Home() {
   const { t } = useLanguage();
@@ -89,6 +308,53 @@ export default function Home() {
     { icon: Globe, titleKey: 'worksEverywhere', descKey: 'worksEverywhereDesc', colorLight: 'bg-emerald-100 text-emerald-600', colorDark: 'dark:bg-emerald-900/30 dark:text-emerald-400' },
   ];
 
+  const testimonials = [
+    {
+      name: "Sarah Chen",
+      role: "Marketing Manager",
+      content: "PDF Studio saved me hours every week. I can merge contracts and add annotations without leaving my browser. The privacy-first approach means I never worry about sensitive documents.",
+      avatar: "SC",
+      rating: 5
+    },
+    {
+      name: "Marcus Johnson",
+      role: "Software Engineer",
+      content: "As a developer, I appreciate that everything runs locally. No server uploads, no tracking. Just pure functionality in a beautiful interface. This is how all web apps should work.",
+      avatar: "MJ",
+      rating: 5
+    },
+    {
+      name: "Elena Rodriguez",
+      role: "Freelance Designer",
+      content: "The batch processing feature is a game-changer for my workflow. I can compress dozens of images and convert them to PDF in seconds. Highly recommend!",
+      avatar: "ER",
+      rating: 5
+    }
+  ];
+
+  const faqs = [
+    {
+      question: "Is PDF Studio really free?",
+      answer: "Yes! PDF Studio is completely free to use. All features are available without any payment. We believe everyone should have access to powerful PDF tools without barriers."
+    },
+    {
+      question: "Are my files uploaded to a server?",
+      answer: "No! All processing happens locally in your browser using JavaScript. Your files never leave your device. This makes PDF Studio 100% private and secure."
+    },
+    {
+      question: "What file formats are supported?",
+      answer: "We support PDF, PNG, JPG, JPEG, GIF, WebP, and Word documents (.docx). You can convert between these formats and perform various operations on PDFs."
+    },
+    {
+      question: "Does the encryption work with other PDF readers?",
+      answer: "Yes! PDFs encrypted with PDF Studio use standard RC4-128 encryption and can be opened with any PDF reader that supports this encryption standard."
+    },
+    {
+      question: "Can I use PDF Studio on my mobile device?",
+      answer: "Absolutely! PDF Studio is fully responsive and works great on smartphones and tablets. The interface automatically adapts to your screen size."
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 transition-colors duration-300">
       {/* Nav */}
@@ -115,7 +381,7 @@ export default function Home() {
       </nav>
 
       {/* Hero */}
-      <section className="pt-24 sm:pt-32 pb-16 sm:pb-24 px-4 sm:px-6 relative overflow-hidden">
+      <section className="pt-20 sm:pt-28 pb-16 sm:pb-24 px-4 sm:px-6 relative overflow-hidden">
         {/* Background decorations */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200 dark:bg-blue-900/30 rounded-full blur-3xl opacity-50" />
@@ -123,53 +389,58 @@ export default function Home() {
           <div className="absolute top-20 left-1/2 -translate-x-1/2 w-96 h-96 bg-purple-200 dark:bg-purple-900/20 rounded-full blur-3xl opacity-30" />
         </div>
         
-        <div className="max-w-4xl mx-auto text-center relative">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/40 dark:to-indigo-900/40 text-blue-700 dark:text-blue-300 text-xs sm:text-sm font-semibold rounded-full mb-6 sm:mb-8 border border-blue-200 dark:border-blue-800 shadow-sm">
-            <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span>{t('browserBased')}</span>
-          </div>
-          
-          {/* Title */}
-          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-[1.1] mb-4 sm:mb-6">
-            <span className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-100 dark:to-white dark:bg-clip-text dark:text-transparent">
-              {t('heroTitle')}
-            </span>
-            <br />
-            <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              {t('heroSubtitle')}
-            </span>
-          </h1>
-          
-          {/* Description */}
-          <p className="text-base sm:text-lg lg:text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed px-2 mb-8 sm:mb-10">
-            {t('heroDesc')}
-          </p>
-          
-          {/* CTA */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-            <Link href="/editor" className="group px-7 sm:px-10 py-4 sm:py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-base sm:text-lg font-bold rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all shadow-xl shadow-blue-500/30 dark:shadow-blue-500/20 hover:shadow-2xl hover:shadow-blue-500/40 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]">
-              <Sparkles className="w-5 h-5" />
-              {t('startEditing')} 
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </div>
+        <div className="max-w-7xl mx-auto relative">
+          <div className="text-center mb-8">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/40 dark:to-indigo-900/40 text-blue-700 dark:text-blue-300 text-xs sm:text-sm font-semibold rounded-full mb-6 sm:mb-8 border border-blue-200 dark:border-blue-800 shadow-sm">
+              <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span>{t('browserBased')}</span>
+            </div>
+            
+            {/* Title */}
+            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-[1.1] mb-4 sm:mb-6">
+              <span className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-100 dark:to-white dark:bg-clip-text dark:text-transparent">
+                {t('heroTitle')}
+              </span>
+              <br />
+              <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                {t('heroSubtitle')}
+              </span>
+            </h1>
+            
+            {/* Description */}
+            <p className="text-base sm:text-lg lg:text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed px-2 mb-8 sm:mb-10">
+              {t('heroDesc')}
+            </p>
+            
+            {/* CTA */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+              <Link href="/editor" className="group px-7 sm:px-10 py-4 sm:py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-base sm:text-lg font-bold rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all shadow-xl shadow-blue-500/30 dark:shadow-blue-500/20 hover:shadow-2xl hover:shadow-blue-500/40 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]">
+                <Sparkles className="w-5 h-5" />
+                {t('startEditing')} 
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
 
-          {/* Trust badges */}
-          <div className="mt-8 sm:mt-12 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-            <div className="flex items-center gap-1.5">
-              <CheckCircle className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-              <span>No signup required</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-              <span>100% Private</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-              <span>Free forever</span>
+            {/* Trust badges */}
+            <div className="mt-8 sm:mt-12 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                <span>No signup required</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                <span>100% Private</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                <span>Free forever</span>
+              </div>
             </div>
           </div>
+          
+          {/* Floating PDF Mockup */}
+          <FloatingPdfMockup />
         </div>
       </section>
 
@@ -213,7 +484,7 @@ export default function Home() {
                     `} />
                     <div className="absolute inset-[1px] rounded-2xl bg-white dark:bg-gray-900" />
                     
-                    {/* Tool Preview */}
+                    {/* tool Preview */}
                     <div className="relative p-4 sm:p-6">
                       <ToolPreview tool={tool.toolType} />
                     </div>
@@ -261,8 +532,32 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Features */}
+      {/* Testimonials */}
       <section className="py-16 sm:py-24 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-10 sm:mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-sm font-semibold rounded-full mb-4">
+              <Users className="w-4 h-4" />
+              <span>Loved by thousands</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
+              What people are saying
+            </h2>
+            <p className="text-base sm:text-lg lg:text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
+              Join thousands of happy users who trust PDF Studio for their PDF needs.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+            {testimonials.map((testimonial, i) => (
+              <TestimonialCard key={i} {...testimonial} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="py-16 sm:py-24 px-4 sm:px-6 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-950">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
@@ -295,6 +590,73 @@ export default function Home() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section className="py-16 sm:py-24 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-10 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
+              Simple, transparent pricing
+            </h2>
+            <p className="text-base sm:text-lg lg:text-xl text-gray-500 dark:text-gray-400">
+              Start free, upgrade when you need more power.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-3xl mx-auto">
+            <PricingCard 
+              name="Free Forever"
+              price="Free"
+              icon={ZapIcon}
+              features={[
+                "All PDF tools",
+                "Unlimited files",
+                "Local processing",
+                "No signup required",
+                "Basic support"
+              ]}
+            />
+            <PricingCard 
+              name="Pro"
+              price="$9"
+              icon={Crown}
+              highlighted
+              features={[
+                "Everything in Free",
+                "Priority processing",
+                "Cloud sync",
+                "Advanced security",
+                "Priority support",
+                "Batch processing"
+              ]}
+            />
+          </div>
+          
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-8">
+            All features are currently free! Pro features coming soon.
+          </p>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-16 sm:py-24 px-4 sm:px-6 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-950">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-10 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
+              Frequently asked questions
+            </h2>
+            <p className="text-base sm:text-lg lg:text-xl text-gray-500 dark:text-gray-400">
+              Everything you need to know about PDF Studio.
+            </p>
+          </div>
+          
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-6 sm:px-8">
+            {faqs.map((faq, i) => (
+              <FAQItem key={i} {...faq} />
+            ))}
           </div>
         </div>
       </section>
