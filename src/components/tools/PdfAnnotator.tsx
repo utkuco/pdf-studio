@@ -3,16 +3,28 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { FileUpload } from '../FileUpload';
 import { renderPdfPageToImage, applyAnnotationsToPdf, downloadFile, getPdfDocument } from '@/lib/pdf-utils';
-import { Download, Loader2, MousePointer2, Eraser, Type, ChevronLeft, ChevronRight, Trash2, FileText, ZoomIn, ZoomOut, Maximize, Move, Square, Circle, Minus, ArrowRight, Highlighter, Undo2, Redo2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Palette, Droplets, Keyboard, HelpCircle } from 'lucide-react';
+import { Download, Loader2, MousePointer2, Eraser, Type, ChevronLeft, ChevronRight, Trash2, FileText, ZoomIn, ZoomOut, Maximize, Move, Square, Circle, Minus, ArrowRight, Highlighter, Undo2, Redo2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Droplets, Keyboard, Pencil, Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '../Toast';
 import { ProgressBar, ProcessingState } from '../ProgressBar';
 import { Tooltip } from '../Tooltip';
 import { KeyboardShortcuts } from '../KeyboardShortcuts';
 
+// Available fonts for text annotation
+const FONTS = [
+  { name: 'Arial', family: 'Arial, sans-serif' },
+  { name: 'Helvetica', family: 'Helvetica, Arial, sans-serif' },
+  { name: 'Times', family: 'Times New Roman, serif' },
+  { name: 'Georgia', family: 'Georgia, serif' },
+  { name: 'Courier', family: 'Courier New, monospace' },
+  { name: 'Verdana', family: 'Verdana, sans-serif' },
+  { name: 'Trebuchet', family: 'Trebuchet MS, sans-serif' },
+  { name: 'Impact', family: 'Impact, sans-serif' },
+];
+
 // Annotation types
 type AnnotationType = 
-  | { id: string; type: 'text'; nx: number; ny: number; nw: number; nh: number; text: string; fontSize: number; color: string; bold: boolean; italic: boolean; underline: boolean; align: 'left' | 'center' | 'right'; opacity: number }
+  | { id: string; type: 'text'; nx: number; ny: number; nw: number; nh: number; text: string; fontFamily: string; fontSize: number; color: string; bold: boolean; italic: boolean; underline: boolean; align: 'left' | 'center' | 'right'; opacity: number }
   | { id: string; type: 'rect'; nx: number; ny: number; nw: number; nh: number; strokeColor: string; fillColor: string; strokeWidth: number; opacity: number }
   | { id: string; type: 'circle'; nx: number; ny: number; nw: number; nh: number; strokeColor: string; fillColor: string; strokeWidth: number; opacity: number }
   | { id: string; type: 'line'; nx: number; ny: number; nw: number; nh: number; strokeColor: string; strokeWidth: number; opacity: number }
@@ -54,6 +66,7 @@ export function PdfAnnotator() {
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   
   // Text properties
+  const [textFont, setTextFont] = useState('Arial, sans-serif');
   const [textSize, setTextSize] = useState(16);
   const [textColor, setTextColor] = useState('#000000');
   const [textBold, setTextBold] = useState(false);
@@ -202,6 +215,7 @@ export function PdfAnnotator() {
       if (clickedAnn) {
         setSelectedId(clickedAnn.id);
         if (clickedAnn.type === 'text') {
+          setTextFont(clickedAnn.fontFamily);
           setTextSize(clickedAnn.fontSize);
           setTextColor(clickedAnn.color);
           setTextBold(clickedAnn.bold);
@@ -259,7 +273,7 @@ export function PdfAnnotator() {
       if (activeTool === 'eraser' && nw > 0.005 && nh > 0.005) {
         addAnnotation({ id: Date.now().toString(), type: 'eraser', nx, ny, nw, nh });
       } else if (activeTool === 'text' && nw > 0.005 && nh > 0.005) {
-        const newAnn: AnnotationType = { id: Date.now().toString(), type: 'text', nx, ny, nw, nh, text: '', fontSize: textSize, color: textColor, bold: textBold, italic: textItalic, underline: textUnderline, align: textAlign, opacity: textOpacity };
+        const newAnn: AnnotationType = { id: Date.now().toString(), type: 'text', nx, ny, nw, nh, text: '', fontFamily: textFont, fontSize: textSize, color: textColor, bold: textBold, italic: textItalic, underline: textUnderline, align: textAlign, opacity: textOpacity };
         addAnnotation(newAnn);
         setEditingTextId(newAnn.id); setSelectedId(newAnn.id); setActiveTool('select');
       } else if (activeTool === 'move-area' && nw > 0.005 && nh > 0.005 && pageData) {
@@ -307,6 +321,7 @@ export function PdfAnnotator() {
     if (activeTool !== 'select') return;
     e.stopPropagation(); setSelectedId(ann.id);
     if (ann.type === 'text') {
+      setTextFont(ann.fontFamily);
       setTextSize(ann.fontSize); setTextColor(ann.color);
       setTextBold(ann.bold); setTextItalic(ann.italic); setTextUnderline(ann.underline);
       setTextAlign(ann.align); setTextOpacity(ann.opacity);
@@ -513,6 +528,14 @@ export function PdfAnnotator() {
         {/* Properties Row - Text */}
         {showTextProps && (
           <div className="flex flex-wrap gap-2 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-xl border border-gray-200 dark:border-gray-700 items-center">
+            {/* Font family selector */}
+            <select value={textFont} onChange={(e) => { setTextFont(e.target.value); handlePropertyChange({ fontFamily: e.target.value }); }}
+              className="text-xs sm:text-sm border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1 px-2 w-28 sm:w-36 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+              {FONTS.map(font => (
+                <option key={font.family} value={font.family} style={{ fontFamily: font.family }}>{font.name}</option>
+              ))}
+            </select>
+            
             {/* Color picker */}
             <div className="flex items-center gap-1">
               <div className="flex gap-0.5">
@@ -528,33 +551,33 @@ export function PdfAnnotator() {
             
             {/* Size */}
             <select value={textSize} onChange={(e) => { const size = Number(e.target.value); setTextSize(size); handlePropertyChange({ fontSize: size }); }}
-              className="text-xs sm:text-sm border-gray-300 rounded-md shadow-sm py-1 px-1 sm:px-2 w-16 sm:w-auto">
+              className="text-xs sm:text-sm border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1 px-1 sm:px-2 w-16 sm:w-auto bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
               {[10, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48, 64].map(size => (<option key={size} value={size}>{size}</option>))}
             </select>
             
             {/* Bold/Italic/Underline */}
             <div className="flex gap-0.5">
               <button onClick={() => { setTextBold(!textBold); handlePropertyChange({ bold: !textBold }); }}
-                className={cn("p-1.5 rounded", textBold ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:bg-gray-200")}><Bold className="w-3.5 h-3.5" /></button>
+                className={cn("p-1.5 rounded", textBold ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" : "text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600")}><Bold className="w-3.5 h-3.5" /></button>
               <button onClick={() => { setTextItalic(!textItalic); handlePropertyChange({ italic: !textItalic }); }}
-                className={cn("p-1.5 rounded", textItalic ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:bg-gray-200")}><Italic className="w-3.5 h-3.5" /></button>
+                className={cn("p-1.5 rounded", textItalic ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" : "text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600")}><Italic className="w-3.5 h-3.5" /></button>
               <button onClick={() => { setTextUnderline(!textUnderline); handlePropertyChange({ underline: !textUnderline }); }}
-                className={cn("p-1.5 rounded", textUnderline ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:bg-gray-200")}><Underline className="w-3.5 h-3.5" /></button>
+                className={cn("p-1.5 rounded", textUnderline ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" : "text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600")}><Underline className="w-3.5 h-3.5" /></button>
             </div>
             
             {/* Align */}
             <div className="flex gap-0.5">
               <button onClick={() => { setTextAlign('left'); handlePropertyChange({ align: 'left' }); }}
-                className={cn("p-1.5 rounded", textAlign === 'left' ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:bg-gray-200")}><AlignLeft className="w-3.5 h-3.5" /></button>
+                className={cn("p-1.5 rounded", textAlign === 'left' ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" : "text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600")}><AlignLeft className="w-3.5 h-3.5" /></button>
               <button onClick={() => { setTextAlign('center'); handlePropertyChange({ align: 'center' }); }}
-                className={cn("p-1.5 rounded", textAlign === 'center' ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:bg-gray-200")}><AlignCenter className="w-3.5 h-3.5" /></button>
+                className={cn("p-1.5 rounded", textAlign === 'center' ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" : "text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600")}><AlignCenter className="w-3.5 h-3.5" /></button>
               <button onClick={() => { setTextAlign('right'); handlePropertyChange({ align: 'right' }); }}
-                className={cn("p-1.5 rounded", textAlign === 'right' ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:bg-gray-200")}><AlignRight className="w-3.5 h-3.5" /></button>
+                className={cn("p-1.5 rounded", textAlign === 'right' ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" : "text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600")}><AlignRight className="w-3.5 h-3.5" /></button>
             </div>
             
             {/* Opacity */}
             <div className="flex items-center gap-1">
-              <Droplets className="w-3.5 h-3.5 text-gray-400" />
+              <Droplets className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
               <input type="range" min="0.1" max="1" step="0.1" value={textOpacity} onChange={(e) => { setTextOpacity(Number(e.target.value)); handlePropertyChange({ opacity: Number(e.target.value) }); }}
                 className="w-12 sm:w-16" />
             </div>
@@ -704,24 +727,36 @@ export function PdfAnnotator() {
                     <div key={ann.id}
                       className={cn("absolute group", activeTool === 'select' && "cursor-move", isSelected && "z-20")}
                       style={{ left: `${ann.nx * 100}%`, top: `${ann.ny * 100}%`, width: `${ann.nw * 100}%`, height: `${ann.nh * 100}%`, opacity: ann.opacity }}
-                      onPointerDown={(e) => startMove(e, ann)}>
+                      onPointerDown={(e) => startMove(e, ann)}
+                      onDoubleClick={(e) => { e.stopPropagation(); setEditingTextId(ann.id); }}>
+                      {/* Selection border */}
+                      {isSelected && (
+                        <div className="absolute inset-0 border-2 border-blue-500 rounded pointer-events-none" />
+                      )}
                       {editingTextId === ann.id ? (
                         <textarea autoFocus value={ann.text}
                           onChange={(e) => updateAnnotation(ann.id, { text: e.target.value })}
                           onBlur={() => setEditingTextId(null)}
-                          className="w-full h-full bg-white/90 border border-blue-300 rounded p-1 text-xs resize-none outline-none"
-                          style={{ fontSize: `${ann.fontSize}px`, color: ann.color, fontWeight: ann.bold ? 'bold' : 'normal', fontStyle: ann.italic ? 'italic' : 'normal', textDecoration: ann.underline ? 'underline' : 'none', textAlign: ann.align }} />
+                          className="w-full h-full bg-white dark:bg-gray-700 border border-blue-300 dark:border-blue-600 rounded p-1 text-xs resize-none outline-none"
+                          style={{ fontFamily: ann.fontFamily, fontSize: `${ann.fontSize}px`, color: ann.color, fontWeight: ann.bold ? 'bold' : 'normal', fontStyle: ann.italic ? 'italic' : 'normal', textDecoration: ann.underline ? 'underline' : 'none', textAlign: ann.align }} />
                       ) : (
-                        <div className="w-full h-full flex items-center overflow-hidden p-1 pointer-events-none"
-                          style={{ fontSize: `${ann.fontSize}px`, color: ann.color, fontWeight: ann.bold ? 'bold' : 'normal', fontStyle: ann.italic ? 'italic' : 'normal', textDecoration: ann.underline ? 'underline' : 'none', textAlign: ann.align, justifyContent: ann.align === 'center' ? 'center' : ann.align === 'right' ? 'flex-end' : 'flex-start' }}>
-                          {ann.text || <span className="text-gray-400 italic">Click to edit...</span>}
+                        <div className="w-full h-full flex items-center overflow-hidden p-1"
+                          style={{ fontFamily: ann.fontFamily, fontSize: `${ann.fontSize}px`, color: ann.color, fontWeight: ann.bold ? 'bold' : 'normal', fontStyle: ann.italic ? 'italic' : 'normal', textDecoration: ann.underline ? 'underline' : 'none', textAlign: ann.align, justifyContent: ann.align === 'center' ? 'center' : ann.align === 'right' ? 'flex-end' : 'flex-start' }}>
+                          {ann.text || <span className="text-gray-400 dark:text-gray-500 italic">Click to edit...</span>}
                         </div>
                       )}
+                      {/* Action buttons */}
                       {activeTool === 'select' && (
-                        <button onClick={(e) => { e.stopPropagation(); deleteAnnotation(ann.id); }}
-                          className={cn("absolute -top-3 -right-3 bg-red-500 text-white p-1 rounded-full transition-opacity z-20", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                        <div className={cn("absolute -top-8 left-1/2 -translate-x-1/2 flex gap-1 transition-opacity", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+                          <button onClick={(e) => { e.stopPropagation(); setEditingTextId(ann.id); }}
+                            className="bg-blue-500 hover:bg-blue-600 text-white p-1 rounded-full transition-colors">
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); deleteAnnotation(ann.id); }}
+                            className="bg-red-500 hover:bg-red-600 text-white p-1 rounded-full transition-colors">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       )}
                     </div>
                   );
@@ -734,12 +769,19 @@ export function PdfAnnotator() {
                       className={cn("absolute group", activeTool === 'select' && "cursor-move", isSelected && "z-20")}
                       style={{ left: `${ann.nx * 100}%`, top: `${ann.ny * 100}%`, width: `${ann.nw * 100}%`, height: `${ann.nh * 100}%`, opacity: ann.opacity }}
                       onPointerDown={(e) => startMove(e, ann)} onPointerDownCapture={(e) => { if (activeTool === 'select') startResize(e, ann); }}>
+                      {/* Selection border */}
+                      {isSelected && (
+                        <div className="absolute inset-0 border-2 border-blue-500 rounded-sm pointer-events-none" />
+                      )}
                       <div className="w-full h-full" style={{ border: `${ann.strokeWidth}px solid ${ann.strokeColor}`, backgroundColor: ann.fillColor === '#FFFFFF' ? 'transparent' : ann.fillColor }} />
+                      {/* Action buttons */}
                       {activeTool === 'select' && (
-                        <button onClick={(e) => { e.stopPropagation(); deleteAnnotation(ann.id); }}
-                          className={cn("absolute -top-3 -right-3 bg-red-500 text-white p-1 rounded-full transition-opacity z-20", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                        <div className={cn("absolute -top-8 left-1/2 -translate-x-1/2 flex gap-1 transition-opacity", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+                          <button onClick={(e) => { e.stopPropagation(); deleteAnnotation(ann.id); }}
+                            className="bg-red-500 hover:bg-red-600 text-white p-1 rounded-full transition-colors">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       )}
                     </div>
                   );
@@ -752,12 +794,19 @@ export function PdfAnnotator() {
                       className={cn("absolute group", activeTool === 'select' && "cursor-move", isSelected && "z-20")}
                       style={{ left: `${ann.nx * 100}%`, top: `${ann.ny * 100}%`, width: `${ann.nw * 100}%`, height: `${ann.nh * 100}%`, opacity: ann.opacity }}
                       onPointerDown={(e) => startMove(e, ann)} onPointerDownCapture={(e) => { if (activeTool === 'select') startResize(e, ann); }}>
+                      {/* Selection border */}
+                      {isSelected && (
+                        <div className="absolute inset-0 border-2 border-blue-500 rounded-full pointer-events-none" />
+                      )}
                       <div className="w-full h-full rounded-full" style={{ border: `${ann.strokeWidth}px solid ${ann.strokeColor}`, backgroundColor: ann.fillColor === '#FFFFFF' ? 'transparent' : ann.fillColor }} />
+                      {/* Action buttons */}
                       {activeTool === 'select' && (
-                        <button onClick={(e) => { e.stopPropagation(); deleteAnnotation(ann.id); }}
-                          className={cn("absolute -top-3 -right-3 bg-red-500 text-white p-1 rounded-full transition-opacity z-20", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                        <div className={cn("absolute -top-8 left-1/2 -translate-x-1/2 flex gap-1 transition-opacity", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+                          <button onClick={(e) => { e.stopPropagation(); deleteAnnotation(ann.id); }}
+                            className="bg-red-500 hover:bg-red-600 text-white p-1 rounded-full transition-colors">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       )}
                     </div>
                   );
@@ -774,14 +823,21 @@ export function PdfAnnotator() {
                       className={cn("absolute group", activeTool === 'select' && "cursor-move", isSelected && "z-20")}
                       style={{ left: `${ann.nx * 100}%`, top: `${ann.ny * 100}%`, width: `${ann.nw * 100}%`, height: `${ann.nh * 100}%`, opacity: ann.opacity }}
                       onPointerDown={(e) => startMove(e, ann)}>
+                      {/* Selection indicator */}
+                      {isSelected && (
+                        <div className="absolute inset-0 border-2 border-blue-500 pointer-events-none rounded-sm" />
+                      )}
                       <div className="w-full h-full relative" style={{ transform: `rotate(${angle}deg)`, transformOrigin: '0 50%' }}>
                         <div className="absolute w-full bg-current" style={{ height: `${ann.strokeWidth}px`, backgroundColor: ann.strokeColor }} />
                       </div>
+                      {/* Action buttons */}
                       {activeTool === 'select' && (
-                        <button onClick={(e) => { e.stopPropagation(); deleteAnnotation(ann.id); }}
-                          className={cn("absolute -top-3 -right-3 bg-red-500 text-white p-1 rounded-full transition-opacity z-20", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                        <div className={cn("absolute -top-8 left-1/2 -translate-x-1/2 flex gap-1 transition-opacity", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+                          <button onClick={(e) => { e.stopPropagation(); deleteAnnotation(ann.id); }}
+                            className="bg-red-500 hover:bg-red-600 text-white p-1 rounded-full transition-colors">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       )}
                     </div>
                   );
@@ -797,6 +853,10 @@ export function PdfAnnotator() {
                       className={cn("absolute group", activeTool === 'select' && "cursor-move", isSelected && "z-20")}
                       style={{ left: `${ann.nx * 100}%`, top: `${ann.ny * 100}%`, width: `${ann.nw * 100}%`, height: `${ann.nh * 100}%`, opacity: ann.opacity }}
                       onPointerDown={(e) => startMove(e, ann)}>
+                      {/* Selection indicator */}
+                      {isSelected && (
+                        <div className="absolute inset-0 border-2 border-blue-500 pointer-events-none rounded-sm" />
+                      )}
                       <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
                         <defs>
                           <marker id={`arrowhead-${ann.id}`} markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -805,11 +865,14 @@ export function PdfAnnotator() {
                         </defs>
                         <line x1="0" y1="50" x2="85" y2="50" stroke={ann.strokeColor} strokeWidth={ann.strokeWidth} markerEnd={`url(#arrowhead-${ann.id})`} />
                       </svg>
+                      {/* Action buttons */}
                       {activeTool === 'select' && (
-                        <button onClick={(e) => { e.stopPropagation(); deleteAnnotation(ann.id); }}
-                          className={cn("absolute -top-3 -right-3 bg-red-500 text-white p-1 rounded-full transition-opacity z-20", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                        <div className={cn("absolute -top-8 left-1/2 -translate-x-1/2 flex gap-1 transition-opacity", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+                          <button onClick={(e) => { e.stopPropagation(); deleteAnnotation(ann.id); }}
+                            className="bg-red-500 hover:bg-red-600 text-white p-1 rounded-full transition-colors">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       )}
                     </div>
                   );
@@ -822,11 +885,18 @@ export function PdfAnnotator() {
                       className={cn("absolute group", activeTool === 'select' && "cursor-move", isSelected && "z-20")}
                       style={{ left: `${ann.nx * 100}%`, top: `${ann.ny * 100}%`, width: `${ann.nw * 100}%`, height: `${ann.nh * 100}%`, opacity: ann.opacity, backgroundColor: ann.color }}
                       onPointerDown={(e) => startMove(e, ann)} onPointerDownCapture={(e) => { if (activeTool === 'select') startResize(e, ann); }}>
+                      {/* Selection border */}
+                      {isSelected && (
+                        <div className="absolute inset-0 border-2 border-blue-500 pointer-events-none" />
+                      )}
+                      {/* Action buttons */}
                       {activeTool === 'select' && (
-                        <button onClick={(e) => { e.stopPropagation(); deleteAnnotation(ann.id); }}
-                          className={cn("absolute -top-3 -right-3 bg-red-500 text-white p-1 rounded-full transition-opacity z-20", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                        <div className={cn("absolute -top-8 left-1/2 -translate-x-1/2 flex gap-1 transition-opacity", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+                          <button onClick={(e) => { e.stopPropagation(); deleteAnnotation(ann.id); }}
+                            className="bg-red-500 hover:bg-red-600 text-white p-1 rounded-full transition-colors">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       )}
                     </div>
                   );
@@ -836,7 +906,7 @@ export function PdfAnnotator() {
                 if (ann.type === 'eraser' || ann.type === 'patch') {
                   return (
                     <div key={ann.id}
-                      className={cn("absolute group", ann.type === 'patch' ? "bg-transparent" : "bg-white",
+                      className={cn("absolute group", ann.type === 'patch' ? "bg-transparent" : "bg-white dark:bg-gray-800",
                         activeTool === 'select' && "cursor-move", isSelected && "ring-2 ring-blue-600 z-20")}
                       style={{
                         left: `${ann.nx * 100}%`, top: `${ann.ny * 100}%`, width: `${ann.nw * 100}%`, height: `${ann.nh * 100}%`,
@@ -844,11 +914,14 @@ export function PdfAnnotator() {
                       }}
                       onPointerDown={(e) => startMove(e, ann)} onPointerDownCapture={(e) => { if (activeTool === 'select') startResize(e, ann); }}>
                       {ann.type === 'patch' && (<img src={ann.imageData} alt="patch" className="w-full h-full object-fill pointer-events-none" draggable={false} />)}
+                      {/* Action buttons */}
                       {activeTool === 'select' && (
-                        <button onClick={(e) => { e.stopPropagation(); deleteAnnotation(ann.id); }}
-                          className={cn("absolute -top-3 -right-3 bg-red-500 text-white p-1 rounded-full transition-opacity z-20", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                        <div className={cn("absolute -top-8 left-1/2 -translate-x-1/2 flex gap-1 transition-opacity", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+                          <button onClick={(e) => { e.stopPropagation(); deleteAnnotation(ann.id); }}
+                            className="bg-red-500 hover:bg-red-600 text-white p-1 rounded-full transition-colors">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       )}
                     </div>
                   );
