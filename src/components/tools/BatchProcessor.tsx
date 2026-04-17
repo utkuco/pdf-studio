@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { FileUpload } from '../FileUpload';
-import { renderPdfPagesToImages, imagesToPdf, downloadFile, mergePdfs } from '@/lib/pdf-utils';
+import { renderPdfPagesToImages, downloadFile, mergePdfs } from '@/lib/pdf-utils';
 import { Download, Loader2, FileText, FileImage, CheckCircle2, XCircle, Clock, RefreshCw, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '../Toast';

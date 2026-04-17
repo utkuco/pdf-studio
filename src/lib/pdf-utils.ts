@@ -6,9 +6,7 @@ import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 // Set workerSrc - use CDN URL for production compatibility
 // Using pdfjs-dist's CDN to avoid SSR and deployment issues
 pdfjsLib.GlobalWorkerOptions.workerSrc = 
-  typeof window !== 'undefined' && window.location.origin
-    ? `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
-    : 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 export async function mergePdfs(files: File[]): Promise<Uint8Array> {
   const mergedPdf = await PDFDocument.create();
