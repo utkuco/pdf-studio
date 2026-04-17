@@ -330,11 +330,11 @@ export default function Home() {
             
             {/* Title */}
             <h1 className="text-4xl sm:text-5xl lg:text-7xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-[1.1] mb-4 sm:mb-6">
-              <span className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-100 dark:to-white bg-clip-text text-transparent">
+              <span className="text-gray-900 dark:text-white">
                 {t('heroTitle')}
               </span>
               <br />
-              <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="text-blue-600 dark:text-blue-400">
                 {t('heroSubtitle')}
               </span>
             </h1>
