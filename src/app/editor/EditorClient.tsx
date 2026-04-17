@@ -29,9 +29,9 @@ export default function EditorClient() {
   }, [activeTool]);
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden font-sans">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden font-sans transition-colors duration-300">
       <Sidebar activeTool={activeTool} setActiveTool={setActiveTool} />
-      <main className="flex-1 overflow-y-auto bg-white lg:pt-0 pt-14 pb-16 lg:pb-0">
+      <main className="flex-1 overflow-y-auto bg-white dark:bg-gray-900 lg:pt-0 pt-14 pb-16 lg:pb-0 transition-colors duration-300">
         <div className="p-4 sm:p-6 lg:p-8 h-full">
           {activeTool === 'annotate' && <PdfAnnotator />}
           {activeTool === 'edit' && <PdfEditor />}
