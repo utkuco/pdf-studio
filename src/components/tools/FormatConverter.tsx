@@ -6,10 +6,12 @@ import { renderPdfPagesToImages, imagesToPdf, downloadFile } from '@/lib/pdf-uti
 import { Download, Loader2, ArrowRightLeft, FileImage, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '../Toast';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 type ConversionMode = 'pdf-to-image' | 'image-to-pdf';
 
 export function FormatConverter() {
+  const { t } = useLanguage();
   const { addToast } = useToast();
   const [mode, setMode] = useState<ConversionMode>('pdf-to-image');
   const [files, setFiles] = useState<File[]>([]);
@@ -46,31 +48,31 @@ export function FormatConverter() {
   return (
     <div className="max-w-3xl mx-auto mt-12 px-4">
       <div className="mb-8 text-center">
-        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Format Converter</h2>
-        <p className="text-gray-500 dark:text-gray-400 mt-2">Convert PDF to images or images to PDF</p>
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">{t('formatConverter')}</h2>
+        <p className="text-gray-500 dark:text-gray-400 mt-2">{t('convertPdfToImages')}</p>
       </div>
       <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-xl mb-8 w-fit mx-auto">
         <button onClick={() => { setMode('pdf-to-image'); setFiles([]); }}
           className={cn("flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all",
             mode === 'pdf-to-image' ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200")}>
-          <FileText className="w-4 h-4" /> PDF to Image
+          <FileText className="w-4 h-4" /> {t('pdfToImage')}
         </button>
         <button onClick={() => { setMode('image-to-pdf'); setFiles([]); }}
           className={cn("flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all",
             mode === 'image-to-pdf' ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200")}>
-          <FileImage className="w-4 h-4" /> Image to PDF
+          <FileImage className="w-4 h-4" /> {t('imageToPdf')}
         </button>
       </div>
       {files.length === 0 ? (
         <FileUpload onFilesSelected={handleFileSelect}
           accept={mode === 'pdf-to-image' ? { 'application/pdf': ['.pdf'] } : { 'image/*': ['.png', '.jpg', '.jpeg'] }}
           multiple={mode === 'image-to-pdf'}
-          title={mode === 'pdf-to-image' ? "Drop PDF here" : "Drop images here"} />
+          title={mode === 'pdf-to-image' ? t('dropPdfHere') : t('dropImagesHere')} />
       ) : (
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="font-medium text-gray-900 dark:text-white">Selected Files ({files.length})</h3>
-            <button onClick={() => setFiles([])} className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium">Clear</button>
+            <h3 className="font-medium text-gray-900 dark:text-white">{t('selectedFiles')} ({files.length})</h3>
+            <button onClick={() => setFiles([])} className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium">{t('clear')}</button>
           </div>
           <div className="space-y-3 mb-8 max-h-60 overflow-y-auto pr-2">
             {files.map((f, i) => (
@@ -83,7 +85,7 @@ export function FormatConverter() {
           </div>
           <button onClick={handleConvert} disabled={processing}
             className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50">
-            {processing ? (<><Loader2 className="w-5 h-5 animate-spin" /> Converting...</>) : (<><ArrowRightLeft className="w-5 h-5" /> Convert Now</>)}
+            {processing ? (<><Loader2 className="w-5 h-5 animate-spin" /> {t('convertingFiles')}</>) : (<><ArrowRightLeft className="w-5 h-5" /> {t('convertNow')}</>)}
           </button>
         </div>
       )}

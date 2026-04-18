@@ -1,12 +1,21 @@
 import { PDFDocument, degrees, StandardFonts, rgb } from 'pdf-lib';
 
-// pdfjs-dist v3.x with legacy build for Next.js compatibility
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
+// Lazy load pdfjs-dist to avoid SSR issues
+// Use dynamic import with proper worker configuration
+let pdfjsLib: any = null;
+let pdfDocCache: Map<string, any> = new Map();
 
-// Set workerSrc - use CDN URL for production compatibility
-// Using pdfjs-dist's CDN to avoid SSR and deployment issues
-pdfjsLib.GlobalWorkerOptions.workerSrc = 
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+async function getPdfJs() {
+  if (!pdfjsLib) {
+    // Import pdfjs-dist using the standard build path for version 3.x
+    const pdfjs = await import('pdfjs-dist/build/pdf');
+    // Use the official pdfjs worker from jsdelivr CDN
+    pdfjs.GlobalWorkerOptions.workerSrc = 
+      'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    pdfjsLib = pdfjs;
+  }
+  return pdfjsLib;
+}
 
 export async function mergePdfs(files: File[]): Promise<Uint8Array> {
   const mergedPdf = await PDFDocument.create();
@@ -60,21 +69,21 @@ export async function editPdfPages(
   return await pdf.save();
 }
 
+// Legacy cache for backward compatibility
 let cachedPdf: { file: File; pdf: any } | null = null;
 
 export async function getPdfDocument(file: File) {
-  if (
-    cachedPdf &&
-    cachedPdf.file.name === file.name &&
-    cachedPdf.file.size === file.size &&
-    cachedPdf.file.lastModified === file.lastModified
-  ) {
+  // Create cache key from file metadata
+  const cacheKey = `${file.name}-${file.size}-${file.lastModified}`;
+  
+  if (cachedPdf && cachedPdf.file.name === file.name && cachedPdf.file.size === file.size && cachedPdf.file.lastModified === file.lastModified) {
     return cachedPdf.pdf;
   }
 
+  const pdfjs = await getPdfJs();
   const arrayBuffer = await file.arrayBuffer();
   const uint8Array = new Uint8Array(arrayBuffer);
-  const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
+  const pdf = await pdfjs.getDocument({ data: uint8Array }).promise;
   cachedPdf = { file, pdf };
   return pdf;
 }

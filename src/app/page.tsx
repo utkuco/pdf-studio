@@ -15,7 +15,7 @@ type TranslationKey = keyof typeof translations.en;
 type ToolPreviewType = 'annotate' | 'edit' | 'convert' | 'merge' | 'word-to-pdf' | 'security' | 'batch';
 
 // Floating PDF Mockup Component
-function FloatingPdfMockup() {
+function FloatingPdfMockup({ t }: { t: (key: TranslationKey) => string }) {
   return (
     <div className="relative w-full max-w-2xl mx-auto mt-12 perspective-1000">
       {/* Main floating document */}
@@ -32,7 +32,7 @@ function FloatingPdfMockup() {
               <div className="w-3 h-3 rounded-full bg-yellow-400" />
               <div className="w-3 h-3 rounded-full bg-green-400" />
             </div>
-            <span className="text-white/80 text-sm font-medium ml-2">document.pdf</span>
+            <span className="text-white/80 text-sm font-medium ml-2">{t('mockupDocumentName')}</span>
           </div>
           
           {/* PDF Content */}
@@ -46,7 +46,7 @@ function FloatingPdfMockup() {
             
             {/* Highlighted annotation */}
             <div className="bg-yellow-200/60 dark:bg-yellow-500/20 h-8 rounded-lg flex items-center px-3">
-              <span className="text-sm text-gray-700 dark:text-gray-300">Important annotation here</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">{t('mockupAnnotationText')}</span>
             </div>
             
             {/* More text */}
@@ -83,7 +83,7 @@ function FloatingPdfMockup() {
             <div className="w-6 h-6 rounded bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
               <CheckCircle className="w-4 h-4 text-green-600" />
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Encrypted</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('mockupEncrypted')}</span>
           </div>
         </div>
         
@@ -92,7 +92,7 @@ function FloatingPdfMockup() {
             <div className="w-6 h-6 rounded bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
               <Zap className="w-4 h-4 text-blue-600" />
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Instant save</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('mockupInstantSave')}</span>
           </div>
         </div>
       </div>
@@ -101,7 +101,7 @@ function FloatingPdfMockup() {
 }
 
 // Testimonial Card
-function TestimonialCard({ name, role, content, avatar, rating }: { name: string; role: string; content: string; avatar: string; rating: number }) {
+function TestimonialCard({ t, nameKey, roleKey, contentKey, avatar, rating }: { t: (key: TranslationKey) => string; nameKey: TranslationKey; roleKey: TranslationKey; contentKey: TranslationKey; avatar: string; rating: number }) {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6 hover:shadow-xl hover:border-gray-200 dark:hover:border-gray-700 transition-all duration-300">
       {/* Rating */}
@@ -112,7 +112,7 @@ function TestimonialCard({ name, role, content, avatar, rating }: { name: string
       </div>
       
       {/* Content */}
-      <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">"{content}"</p>
+      <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">"{t(contentKey)}"</p>
       
       {/* Author */}
       <div className="flex items-center gap-3">
@@ -120,8 +120,8 @@ function TestimonialCard({ name, role, content, avatar, rating }: { name: string
           {avatar}
         </div>
         <div>
-          <p className="font-semibold text-gray-900 dark:text-white text-sm">{name}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">{role}</p>
+          <p className="font-semibold text-gray-900 dark:text-white text-sm">{t(nameKey)}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{t(roleKey)}</p>
         </div>
       </div>
     </div>
@@ -129,7 +129,7 @@ function TestimonialCard({ name, role, content, avatar, rating }: { name: string
 }
 
 // FAQ Item
-function FAQItem({ question, answer }: { question: string; answer: string }) {
+function FAQItem({ t, questionKey, answerKey }: { t: (key: TranslationKey) => string; questionKey: TranslationKey; answerKey: TranslationKey }) {
   const [isOpen, setIsOpen] = useState(false);
   
   return (
@@ -138,7 +138,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
         onClick={() => setIsOpen(!isOpen)}
         className="w-full py-5 flex items-center justify-between text-left"
       >
-        <span className="font-semibold text-gray-900 dark:text-white pr-4">{question}</span>
+        <span className="font-semibold text-gray-900 dark:text-white pr-4">{t(questionKey)}</span>
         {isOpen ? (
           <ChevronUp className="w-5 h-5 text-gray-400 flex-shrink-0" />
         ) : (
@@ -147,7 +147,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
       </button>
       {isOpen && (
         <div className="pb-5 text-gray-500 dark:text-gray-400 leading-relaxed">
-          {answer}
+          {t(answerKey)}
         </div>
       )}
     </div>
@@ -158,14 +158,14 @@ export default function Home() {
   const { t } = useLanguage();
   const [hoveredTool, setHoveredTool] = useState<string | null>(null);
 
-  const tools: { key: TranslationKey; descKey: TranslationKey; icon: typeof Type; color: string; gradient: string; features: string[]; toolType: ToolPreviewType }[] = [
+  const tools: { key: TranslationKey; descKey: TranslationKey; icon: typeof Type; color: string; gradient: string; featureKeys: TranslationKey[]; toolType: ToolPreviewType }[] = [
     { 
       key: 'annotate', 
       descKey: 'annotateDesc', 
       icon: Type, 
       color: 'bg-blue-500',
       gradient: 'from-blue-500 to-indigo-600',
-      features: ['Add text & comments', 'Draw & highlight', 'Erase & move elements'],
+      featureKeys: ['toolAnnotateFeature1', 'toolAnnotateFeature2', 'toolAnnotateFeature3'],
       toolType: 'annotate'
     },
     { 
@@ -174,7 +174,7 @@ export default function Home() {
       icon: FileEdit, 
       color: 'bg-indigo-500',
       gradient: 'from-indigo-500 to-purple-600',
-      features: ['Rotate pages', 'Delete pages', 'Reorder pages'],
+      featureKeys: ['toolEditFeature1', 'toolEditFeature2', 'toolEditFeature3'],
       toolType: 'edit'
     },
     { 
@@ -183,7 +183,7 @@ export default function Home() {
       icon: ArrowRightLeft, 
       color: 'bg-emerald-500',
       gradient: 'from-emerald-500 to-teal-600',
-      features: ['PDF to Images', 'Images to PDF', 'High quality output'],
+      featureKeys: ['toolConvertFeature1', 'toolConvertFeature2', 'toolConvertFeature3'],
       toolType: 'convert'
     },
     { 
@@ -192,7 +192,7 @@ export default function Home() {
       icon: Layers, 
       color: 'bg-orange-500',
       gradient: 'from-orange-500 to-amber-600',
-      features: ['Combine multiple files', 'Drag to reorder', 'Instant merge'],
+      featureKeys: ['toolMergeFeature1', 'toolMergeFeature2', 'toolMergeFeature3'],
       toolType: 'merge'
     },
     { 
@@ -201,7 +201,7 @@ export default function Home() {
       icon: FileText, 
       color: 'bg-purple-500',
       gradient: 'from-purple-500 to-pink-600',
-      features: ['Preserve formatting', 'Fast conversion', 'Secure processing'],
+      featureKeys: ['toolWordToPdfFeature1', 'toolWordToPdfFeature2', 'toolWordToPdfFeature3'],
       toolType: 'word-to-pdf'
     },
     { 
@@ -210,7 +210,7 @@ export default function Home() {
       icon: Shield, 
       color: 'bg-red-500',
       gradient: 'from-red-500 to-rose-600',
-      features: ['Password protect', 'AES-256 encryption', 'Secure processing'],
+      featureKeys: ['toolSecurityFeature1', 'toolSecurityFeature2', 'toolSecurityFeature3'],
       toolType: 'security'
     },
     { 
@@ -219,7 +219,7 @@ export default function Home() {
       icon: Layers, 
       color: 'bg-cyan-500',
       gradient: 'from-cyan-500 to-sky-600',
-      features: ['Process multiple files', 'Batch operations', 'Save time'],
+      featureKeys: ['toolBatchFeature1', 'toolBatchFeature2', 'toolBatchFeature3'],
       toolType: 'batch'
     },
   ];
@@ -230,50 +230,50 @@ export default function Home() {
     { icon: Globe, titleKey: 'worksEverywhere', descKey: 'worksEverywhereDesc', colorLight: 'bg-emerald-100 text-emerald-600', colorDark: 'dark:bg-emerald-900/30 dark:text-emerald-400' },
   ];
 
-  const testimonials = [
+  const testimonials: { nameKey: TranslationKey; roleKey: TranslationKey; contentKey: TranslationKey; avatar: string; rating: number }[] = [
     {
-      name: "Sarah Chen",
-      role: "Marketing Manager",
-      content: "PDF Studio saved me hours every week. I can merge contracts and add annotations without leaving my browser. The privacy-first approach means I never worry about sensitive documents.",
+      nameKey: 'testimonialSarahName',
+      roleKey: 'testimonialSarahRole',
+      contentKey: 'testimonialSarahContent',
       avatar: "SC",
       rating: 5
     },
     {
-      name: "Marcus Johnson",
-      role: "Software Engineer",
-      content: "As a developer, I appreciate that everything runs locally. No server uploads, no tracking. Just pure functionality in a beautiful interface. This is how all web apps should work.",
+      nameKey: 'testimonialMarcusName',
+      roleKey: 'testimonialMarcusRole',
+      contentKey: 'testimonialMarcusContent',
       avatar: "MJ",
       rating: 5
     },
     {
-      name: "Elena Rodriguez",
-      role: "Freelance Designer",
-      content: "The batch processing feature is a game-changer for my workflow. I can compress dozens of images and convert them to PDF in seconds. Highly recommend!",
+      nameKey: 'testimonialElenaName',
+      roleKey: 'testimonialElenaRole',
+      contentKey: 'testimonialElenaContent',
       avatar: "ER",
       rating: 5
     }
   ];
 
-  const faqs = [
+  const faqs: { questionKey: TranslationKey; answerKey: TranslationKey }[] = [
     {
-      question: "Is PDF Studio really free?",
-      answer: "Yes! PDF Studio is completely free to use. All features are available without any payment. We believe everyone should have access to powerful PDF tools without barriers."
+      questionKey: 'faqIsFreeQ',
+      answerKey: 'faqIsFreeA'
     },
     {
-      question: "Are my files uploaded to a server?",
-      answer: "No! All processing happens locally in your browser using JavaScript. Your files never leave your device. This makes PDF Studio 100% private and secure."
+      questionKey: 'faqFilesUploadedQ',
+      answerKey: 'faqFilesUploadedA'
     },
     {
-      question: "What file formats are supported?",
-      answer: "We support PDF, PNG, JPG, JPEG, GIF, WebP, and Word documents (.docx). You can convert between these formats and perform various operations on PDFs."
+      questionKey: 'faqFormatsQ',
+      answerKey: 'faqFormatsA'
     },
     {
-      question: "Does the encryption work with other PDF readers?",
-      answer: "Yes! PDFs encrypted with PDF Studio use standard RC4-128 encryption and can be opened with any PDF reader that supports this encryption standard."
+      questionKey: 'faqEncryptionQ',
+      answerKey: 'faqEncryptionA'
     },
     {
-      question: "Can I use PDF Studio on my mobile device?",
-      answer: "Absolutely! PDF Studio is fully responsive and works great on smartphones and tablets. The interface automatically adapts to your screen size."
+      questionKey: 'faqMobileQ',
+      answerKey: 'faqMobileA'
     }
   ];
 
@@ -295,7 +295,7 @@ export default function Home() {
               <path d="M19 4 L27 12 L19 12 Z" fill="#E5E7EB"/>
               <text x="7" y="20" fontFamily="Arial" fontSize="9" fontWeight="bold" fill="#2563EB">PDF</text>
             </svg>
-            <span className="text-base sm:text-xl font-bold text-gray-900 dark:text-white tracking-tight">PDF Studio</span>
+            <span className="text-base sm:text-xl font-bold text-gray-900 dark:text-white tracking-tight">{t('pdfStudioName')}</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="hidden sm:block">
@@ -357,21 +357,21 @@ export default function Home() {
             <div className="mt-8 sm:mt-12 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
               <div className="flex items-center gap-1.5">
                 <CheckCircle className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-                <span>No signup required</span>
+                <span>{t('noSignupRequired')}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-                <span>100% Private</span>
+                <span>{t('hundredPercentPrivate')}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-                <span>Free forever</span>
+                <span>{t('freeForeverBadge')}</span>
               </div>
             </div>
           </div>
           
           {/* Floating PDF Mockup */}
-          <FloatingPdfMockup />
+          <FloatingPdfMockup t={t} />
         </div>
       </section>
 
@@ -447,10 +447,10 @@ export default function Home() {
                         space-y-1.5 transition-all duration-300
                         ${isHovered ? 'opacity-100 max-h-20' : 'opacity-0 max-h-0 overflow-hidden'}
                       `}>
-                        {tool.features.map((feature, i) => (
+                        {tool.featureKeys.map((featureKey, i) => (
                           <div key={i} className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
                             <div className={`w-1.5 h-1.5 rounded-full bg-gradient-to-br ${tool.gradient}`} />
-                            <span>{feature}</span>
+                            <span>{t(featureKey)}</span>
                           </div>
                         ))}
                       </div>
@@ -469,19 +469,19 @@ export default function Home() {
           <div className="text-center mb-10 sm:mb-16">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-sm font-semibold rounded-full mb-4">
               <Users className="w-4 h-4" />
-              <span>Loved by thousands</span>
+              <span>{t('lovedByThousands')}</span>
             </div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
-              What people are saying
+              {t('testimonialsTitle')}
             </h2>
             <p className="text-base sm:text-lg lg:text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
-              Join thousands of happy users who trust PDF Studio for their PDF needs.
+              {t('testimonialsSubtitle')}
             </p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-            {testimonials.map((testimonial, i) => (
-              <TestimonialCard key={i} {...testimonial} />
+            {testimonials.map((testimonial, i) => t && (
+              <TestimonialCard key={i} {...testimonial} t={t} />
             ))}
           </div>
         </div>
@@ -530,10 +530,10 @@ export default function Home() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
-              100% Free, Forever
+              {t('pricingTitle')}
             </h2>
             <p className="text-base sm:text-lg lg:text-xl text-gray-500 dark:text-gray-400">
-              All features are completely free. No hidden costs, no premium paywalls.
+              {t('pricingSubtitle')}
             </p>
           </div>
           
@@ -543,22 +543,22 @@ export default function Home() {
                 <ZapIcon className="w-8 h-8 text-white" />
               </div>
               
-              <h3 className="text-2xl font-bold mb-2">Free Forever</h3>
+              <h3 className="text-2xl font-bold mb-2">{t('freeForeverPrice')}</h3>
               
               <div className="mb-6">
                 <span className="text-5xl font-extrabold">$0</span>
-                <span className="text-white/70 ml-2">forever</span>
+                <span className="text-white/70 ml-2">{t('freeForeverBadge')}</span>
               </div>
               
               <ul className="space-y-3 mb-8">
                 {[
-                  "All PDF tools",
-                  "Unlimited files",
-                  "Local processing",
-                  "No signup required",
-                  "Batch processing",
-                  "Priority support",
-                  "Cloud sync (coming soon)"
+                  t('pricingFeature1'),
+                  t('pricingFeature2'),
+                  t('pricingFeature3'),
+                  t('pricingFeature4'),
+                  t('pricingFeature5'),
+                  t('pricingFeature6'),
+                  t('pricingFeature7')
                 ].map((feature, i) => (
                   <li key={i} className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-white/80 flex-shrink-0" />
@@ -571,7 +571,7 @@ export default function Home() {
                 href="/editor"
                 className="block w-full py-4 px-6 rounded-xl font-bold text-center bg-white text-blue-600 hover:bg-gray-100 transition-all"
               >
-                Start Using Free
+                {t('startUsingFree')}
               </Link>
             </div>
           </div>
@@ -583,16 +583,16 @@ export default function Home() {
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-10 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
-              Frequently asked questions
+              {t('faqTitle')}
             </h2>
             <p className="text-base sm:text-lg lg:text-xl text-gray-500 dark:text-gray-400">
-              Everything you need to know about PDF Studio.
+              {t('faqSubtitle')}
             </p>
           </div>
           
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-6 sm:px-8">
-            {faqs.map((faq, i) => (
-              <FAQItem key={i} {...faq} />
+            {faqs.map((faq, i) => t && (
+              <FAQItem key={i} {...faq} t={t} />
             ))}
           </div>
         </div>

@@ -4,6 +4,7 @@ import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { UploadCloud, FileIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 interface FileUploadProps {
   onFilesSelected: (files: File[]) => void;
@@ -18,10 +19,15 @@ export function FileUpload({
   onFilesSelected, 
   accept, 
   multiple = true, 
-  className, 
-  title = "Drop files here", 
-  subtitle = "or click to browse" 
+  className,
+  title,
+  subtitle
 }: FileUploadProps) {
+  const { t } = useLanguage();
+  
+  const defaultTitle = title || t('fileUploadTitle');
+  const defaultSubtitle = subtitle || t('fileUploadSubtitle');
+  
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
       onFilesSelected(acceptedFiles);
@@ -74,10 +80,10 @@ export function FileUpload({
         !isDragActive && "text-gray-700 dark:text-gray-200"
       )}>
         {isDragActive && isDragReject 
-          ? "Invalid file type" 
+          ? t('invalidFileType')
           : isDragActive 
-            ? "Drop files here!" 
-            : title
+            ? t('dropFilesHere') 
+            : defaultTitle
         }
       </p>
       
@@ -89,17 +95,17 @@ export function FileUpload({
         !isDragActive && "text-gray-500 dark:text-gray-400"
       )}>
         {isDragActive && isDragReject 
-          ? "This file type is not accepted" 
+          ? t('fileTypeNotAccepted')
           : isDragActive 
-            ? "Release to upload" 
-            : subtitle
+            ? t('releaseToUpload')
+            : defaultSubtitle
         }
       </p>
       
       {/* File type hint */}
       {!isDragActive && (
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-3 px-3 py-1.5 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-          PDF, Images, Word documents supported
+          {t('fileUploadSupported')}
         </p>
       )}
       
@@ -108,12 +114,12 @@ export function FileUpload({
         <div className="absolute top-4 right-4">
           {isDragAccept && (
             <div className="px-2 py-1 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-xs font-medium rounded-lg">
-              ✓ Accepted
+              ✓ {t('accepted')}
             </div>
           )}
           {isDragReject && (
             <div className="px-2 py-1 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-xs font-medium rounded-lg">
-              ✕ Rejected
+              ✕ {t('rejected')}
             </div>
           )}
         </div>

@@ -8,10 +8,12 @@ import { cn } from '@/lib/utils';
 import { useToast } from '../Toast';
 import { ProcessingState } from '../ProgressBar';
 import { Tooltip } from '../Tooltip';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 type SecurityMode = 'encrypt' | 'decrypt' | 'remove-password';
 
 export function SecurityTool() {
+  const { t } = useLanguage();
   const { addToast } = useToast();
   const [mode, setMode] = useState<SecurityMode>('encrypt');
   const [file, setFile] = useState<File | null>(null);
@@ -103,8 +105,8 @@ export function SecurityTool() {
             <Shield className="w-8 h-8 text-blue-600 dark:text-blue-400" />
           </div>
         </div>
-        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">PDF Security</h2>
-        <p className="text-gray-500 dark:text-gray-400 mt-2">Encrypt, decrypt, or remove password protection</p>
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">{t('pdfSecurity')}</h2>
+        <p className="text-gray-500 dark:text-gray-400 mt-2">{t('pdfSecurityDesc')}</p>
       </div>
 
       {/* Mode Selector */}
@@ -114,21 +116,21 @@ export function SecurityTool() {
           className={cn("flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all",
             mode === 'encrypt' ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200")}
         >
-          <Lock className="w-4 h-4" /> Encrypt
+          <Lock className="w-4 h-4" /> {t('encrypt')}
         </button>
         <button 
           onClick={() => { setMode('decrypt'); setFile(null); setPassword(''); setConfirmPassword(''); setIsProtected(null); }}
           className={cn("flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all relative",
             mode === 'decrypt' ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200")}
         >
-          <Unlock className="w-4 h-4" /> Decrypt
+          <Unlock className="w-4 h-4" /> {t('decrypt')}
         </button>
         <button 
           onClick={() => { setMode('remove-password'); setFile(null); setPassword(''); setConfirmPassword(''); setIsProtected(null); }}
           className={cn("flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all",
             mode === 'remove-password' ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200")}
         >
-          <Key className="w-4 h-4" /> Remove Password
+          <Key className="w-4 h-4" /> {t('removePassword')}
         </button>
       </div>
       
@@ -138,10 +140,10 @@ export function SecurityTool() {
           <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
           <div className="text-sm">
             <p className="font-medium text-amber-800 dark:text-amber-200 mb-1">
-              Browser limitation
+              {t('browserLimitation')}
             </p>
             <p className="text-amber-700 dark:text-amber-300">
-              PDF decryption and password removal require desktop application or server-side processing for security reasons. You can still encrypt PDFs in your browser.
+              {t('browserLimitationDesc')}
             </p>
           </div>
         </div>
@@ -153,8 +155,8 @@ export function SecurityTool() {
             onFilesSelected={handleFileSelect} 
             accept={{ 'application/pdf': ['.pdf'] }} 
             multiple={false}
-            title={mode === 'encrypt' ? "Drop PDF to encrypt" : "Drop PDF to decrypt"}
-            subtitle={mode === 'encrypt' ? "Add password protection to your PDF" : "Enter password to unlock"}
+            title={mode === 'encrypt' ? t('dropPdfToEncrypt') : t('dropPdfToDecrypt')}
+            subtitle={mode === 'encrypt' ? t('addPasswordProtection') : t('enterPasswordToUnlock')}
           />
         ) : (
           <div className="space-y-6">
@@ -168,7 +170,7 @@ export function SecurityTool() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
               </div>
               {isProtected !== null && (
-                <Tooltip content={isProtected ? "Password protected" : "No password"} position="top">
+                <Tooltip content={isProtected ? t('passwordProtected') : t('noPassword')} position="top">
                   <div className={cn("p-2 rounded-lg", isProtected ? "bg-amber-100 dark:bg-amber-900/40" : "bg-green-100 dark:bg-green-900/40")}>
                     {isProtected ? (
                       <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400" />
@@ -182,7 +184,7 @@ export function SecurityTool() {
                 onClick={() => { setFile(null); setPassword(''); setConfirmPassword(''); setIsProtected(null); }}
                 className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium"
               >
-                Remove
+                {t('remove')}
               </button>
             </div>
 
@@ -191,20 +193,20 @@ export function SecurityTool() {
               {mode !== 'encrypt' && isProtected === false && (
                 <div className="flex items-center gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 rounded-lg text-sm">
                   <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                  <p>This PDF is not password protected. Use Encrypt to add password protection.</p>
+                  <p>{t('thisPdfNotProtected')}</p>
                 </div>
               )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {mode === 'encrypt' ? 'Set Password' : 'Enter Password'}
+                  {mode === 'encrypt' ? t('setPassword') : t('enterPassword')}
                 </label>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder={mode === 'encrypt' ? 'Enter password' : 'Enter current password'}
+                    placeholder={mode === 'encrypt' ? t('enterPassword') : t('enterCurrentPassword')}
                     className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <button
@@ -220,13 +222,13 @@ export function SecurityTool() {
               {mode === 'encrypt' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Confirm Password
+                    {t('confirmPassword')}
                   </label>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm password"
+                    placeholder={t('confirmPasswordPlaceholder')}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
@@ -246,11 +248,11 @@ export function SecurityTool() {
               )}
             >
               {processing ? (
-                <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</>
+                <><Loader2 className="w-5 h-5 animate-spin" /> {t('processing')}</>
               ) : mode === 'encrypt' ? (
-                <><Lock className="w-5 h-5" /> Encrypt PDF</>
+                <><Lock className="w-5 h-5" /> {t('encryptPdf')}</>
               ) : (
-                <><Unlock className="w-5 h-5" /> Decrypt PDF</>
+                <><Unlock className="w-5 h-5" /> {t('decryptPdf')}</>
               )}
             </button>
 
@@ -258,8 +260,8 @@ export function SecurityTool() {
             <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
               <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-blue-700 dark:text-blue-300">
-                <p className="font-medium mb-1">Your files are processed locally</p>
-                <p className="text-blue-600 dark:text-blue-400">Passwords are never uploaded to any server. All encryption happens in your browser.</p>
+                <p className="font-medium mb-1">{t('filesProcessedLocally')}</p>
+                <p className="text-blue-600 dark:text-blue-400">{t('passwordsNeverUploaded')}</p>
               </div>
             </div>
           </div>
@@ -272,15 +274,15 @@ export function SecurityTool() {
           <div className="bg-green-100 dark:bg-green-900/40 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
             <Lock className="w-6 h-6 text-green-600 dark:text-green-400" />
           </div>
-          <h4 className="font-bold text-gray-900 dark:text-white mb-2">Password Protection</h4>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Secure your PDFs with strong AES encryption</p>
+          <h4 className="font-bold text-gray-900 dark:text-white mb-2">{t('passwordProtection')}</h4>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('secureYourPdfs')}</p>
         </div>
         <div className="p-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
           <div className="bg-blue-100 dark:bg-blue-900/40 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
             <Shield className="w-6 h-6 text-blue-600 dark:text-blue-400" />
           </div>
-          <h4 className="font-bold text-gray-900 dark:text-white mb-2">Secure Processing</h4>
-          <p className="text-sm text-gray-500 dark:text-gray-400">All processing happens locally in your browser</p>
+          <h4 className="font-bold text-gray-900 dark:text-white mb-2">{t('secureProcessing')}</h4>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('allProcessingHappensLocally')}</p>
         </div>
       </div>
     </div>

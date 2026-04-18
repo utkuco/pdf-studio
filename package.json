@@ -34,6 +34,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/pdfjs-dist": "^2.10.377",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "copy-webpack-plugin": "^14.0.0",

@@ -95,7 +95,7 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
         {/* Theme Toggle */}
         <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Appearance</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t('appearance')}</span>
             <ThemeToggle />
           </div>
         </div>
@@ -103,11 +103,11 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
         {/* Favorites Section */}
         <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">Quick Access</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">{t('quickAccess')}</span>
             <button 
               onClick={() => setShowFavorites(!showFavorites)}
               className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              title="Manage favorites"
+              title={t('manageFavorites')}
             >
               <Star className={cn("w-4 h-4", showFavorites ? "text-amber-500 fill-amber-500" : "text-gray-400")} />
             </button>
@@ -126,7 +126,7 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
         
         {/* Tools */}
         <div className="p-4 flex-1 flex flex-col gap-2 overflow-y-auto">
-          <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 px-3">Tools</div>
+          <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 px-3">{t('tools')}</div>
           {tools.map((tool) => {
             const Icon = toolIcons[tool.id];
             const isActive = activeTool === tool.id;
@@ -198,7 +198,7 @@ export function Sidebar({ activeTool, setActiveTool }: SidebarProps) {
         <div className="p-6 border-t border-gray-100 dark:border-gray-800">
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-100 dark:border-blue-800/50">
             <p className="text-xs text-blue-700 dark:text-blue-300 font-medium text-center">
-              🔒 Your files never leave your device
+              {t('yourFilesPrivate')}
             </p>
           </div>
         </div>

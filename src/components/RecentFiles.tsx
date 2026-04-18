@@ -4,16 +4,18 @@ import React from 'react';
 import { FileText, FileImage, Clock, Trash2, X } from 'lucide-react';
 import { useAppStore, RecentFile } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 export function RecentFiles() {
+  const { t } = useLanguage();
   const { recentFiles, removeRecentFile, clearRecentFiles } = useAppStore();
 
   if (recentFiles.length === 0) {
     return (
       <div className="p-4 text-center">
         <Clock className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-        <p className="text-sm text-gray-500 dark:text-gray-400">No recent files</p>
-        <p className="text-xs text-gray-400 dark:text-gray-500">Files you process will appear here</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{t('noRecentFiles')}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500">{t('filesAppearHere')}</p>
       </div>
     );
   }
@@ -30,10 +32,10 @@ export function RecentFiles() {
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
     
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
+    if (minutes < 1) return t('justNow');
+    if (minutes < 60) return t('minutesAgo').replace('{n}', String(minutes));
+    if (hours < 24) return t('hoursAgo').replace('{n}', String(hours));
+    if (days < 7) return t('daysAgo').replace('{n}', String(days));
     return new Date(timestamp).toLocaleDateString();
   };
 
@@ -41,13 +43,13 @@ export function RecentFiles() {
     <div className="p-2">
       <div className="flex items-center justify-between px-2 py-1 mb-2">
         <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-          Recent ({recentFiles.length})
+          {t('recent')} ({recentFiles.length})
         </span>
         <button
           onClick={clearRecentFiles}
           className="text-xs text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
         >
-          Clear
+          {t('clearRecent')}
         </button>
       </div>
       <div className="space-y-1 max-h-[200px] overflow-y-auto">

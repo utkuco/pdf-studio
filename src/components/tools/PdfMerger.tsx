@@ -6,8 +6,10 @@ import { mergePdfs, downloadFile } from '@/lib/pdf-utils';
 import { Download, Loader2, FileText, Trash2, GripVertical, ArrowUp, ArrowDown, Move } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '../Toast';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 export function PdfMerger() {
+  const { t } = useLanguage();
   const { addToast } = useToast();
   const [files, setFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
@@ -110,20 +112,20 @@ export function PdfMerger() {
         <div className="mb-8 text-center">
           <h2 className="text-2xl font-semibold text-gray-900 dark:text-white flex items-center justify-center gap-3">
             <FileText className="w-7 h-7 text-blue-600 dark:text-blue-400" />
-            Merge PDF
+            {t('mergePdfTitle')}
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">Combine multiple PDF files into one document</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">{t('combineMultiplePdfs')}</p>
         </div>
         <FileUpload 
           onFilesSelected={handleFileSelect} 
           accept={{ 'application/pdf': ['.pdf'] }} 
           multiple={true}
-          title="Drop PDF files here"
-          subtitle="Select multiple files to merge"
+          title={t('dropPdfFilesHere')}
+          subtitle={t('selectMultipleFiles')}
         />
         <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
           <p className="text-sm text-blue-700 dark:text-blue-300 text-center">
-            💡 Tip: You can add more files after the first selection
+            {t('tipAddMoreFiles')}
           </p>
         </div>
       </div>
@@ -135,20 +137,20 @@ export function PdfMerger() {
       <div className="mb-8 text-center">
         <h2 className="text-2xl font-semibold text-gray-900 dark:text-white flex items-center justify-center gap-3">
           <FileText className="w-7 h-7 text-blue-600 dark:text-blue-400" />
-          Merge PDF
+          {t('mergePdfTitle')}
         </h2>
-        <p className="text-gray-500 dark:text-gray-400 mt-2">Drag files to reorder, then merge</p>
+        <p className="text-gray-500 dark:text-gray-400 mt-2">{t('dragFilesReorder')}</p>
       </div>
 
       {/* File List */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-sm mb-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-900 dark:text-white">
-            Files ({files.length})
+            {t('files')} ({files.length})
           </h3>
           <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
             <Move className="w-4 h-4" />
-            Drag to reorder
+            {t('dragToReorder')}
           </div>
         </div>
 
@@ -195,7 +197,7 @@ export function PdfMerger() {
                   onClick={() => handleMoveUp(index)}
                   disabled={index === 0}
                   className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  title="Move up"
+                  title={t('moveUp')}
                 >
                   <ArrowUp className="w-4 h-4" />
                 </button>
@@ -203,7 +205,7 @@ export function PdfMerger() {
                   onClick={() => handleMoveDown(index)}
                   disabled={index === files.length - 1}
                   className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  title="Move down"
+                  title={t('moveDown')}
                 >
                   <ArrowDown className="w-4 h-4" />
                 </button>
@@ -213,7 +215,7 @@ export function PdfMerger() {
               <button
                 onClick={() => handleRemove(index)}
                 className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                title="Remove file"
+                title={t('removeFile')}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -228,8 +230,8 @@ export function PdfMerger() {
           onFilesSelected={handleFileSelect} 
           accept={{ 'application/pdf': ['.pdf'] }} 
           multiple={true}
-          title="Add more files"
-          subtitle="Click or drop to add"
+          title={t('addMoreFiles')}
+          subtitle={t('clickOrDropToAdd')}
           className="py-4 min-h-[80px]"
         />
       </div>
@@ -240,7 +242,7 @@ export function PdfMerger() {
           onClick={() => setFiles([])}
           className="px-6 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
         >
-          Clear All
+          {t('clearAll')}
         </button>
         <button
           onClick={handleMerge}
@@ -253,9 +255,9 @@ export function PdfMerger() {
           )}
         >
           {processing ? (
-            <><Loader2 className="w-5 h-5 animate-spin" /> Merging...</>
+            <><Loader2 className="w-5 h-5 animate-spin" /> {t('merging')}</>
           ) : (
-            <><Download className="w-5 h-5" /> Merge {files.length} PDFs</>
+            <><Download className="w-5 h-5" /> {t('mergeNPdfs').replace('{count}', String(files.length))}</>
           )}
         </button>
       </div>

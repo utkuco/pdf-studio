@@ -9,6 +9,7 @@ import { useToast } from '../Toast';
 import { ProgressBar, ProcessingState } from '../ProgressBar';
 import { Tooltip } from '../Tooltip';
 import { KeyboardShortcuts } from '../KeyboardShortcuts';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 // Available fonts for text annotation
 const FONTS = [
@@ -44,6 +45,7 @@ interface HistoryState {
 }
 
 export function PdfAnnotator() {
+  const { t } = useLanguage();
   const { addToast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [numPages, setNumPages] = useState(0);
@@ -169,10 +171,10 @@ export function PdfAnnotator() {
     try {
       const pdf = await getPdfDocument(selectedFile);
       setNumPages(pdf.numPages);
-      addToast('success', `PDF loaded: ${selectedFile.name} (${pdf.numPages} pages)`);
+      addToast('success', t('pdfLoaded').replace('{name}', selectedFile.name).replace('{pages}', String(pdf.numPages)));
     } catch (error) {
       console.error("Error loading PDF:", error);
-      addToast('error', `Error loading PDF: ${error instanceof Error ? error.message : String(error)}`);
+      addToast('error', t('errorLoadingPdf').replace('{error}', error instanceof Error ? error.message : String(error)));
       setFile(null);
       setLoading(false);
     }
@@ -365,8 +367,8 @@ export function PdfAnnotator() {
     return (
       <div className="max-w-3xl mx-auto mt-12 px-4">
         <div className="mb-8 text-center">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Annotate PDF</h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">Add text, shapes, highlights, and more to your PDF</p>
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">{t('annotatePdfTitle')}</h2>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">{t('annotatePdfDesc')}</p>
         </div>
         <FileUpload onFilesSelected={handleFileSelect} accept={{ 'application/pdf': ['.pdf'] }} multiple={false} />
       </div>
@@ -395,17 +397,17 @@ export function PdfAnnotator() {
           <h2 className="text-base sm:text-xl font-semibold text-gray-900 dark:text-white truncate">{file.name}</h2>
         </div>
         <div className="flex gap-2 sm:gap-3">
-          <Tooltip content="Keyboard shortcuts (?)" position="bottom">
+          <Tooltip content={`${t('keyboardShortcutsTitle')} (?)`} position="bottom">
             <button onClick={() => setShowShortcuts(true)}
               className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Keyboard className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </Tooltip>
           <button onClick={() => { setFile(null); setAnnotations({}); setHistory([]); setHistoryIndex(-1); }}
-            className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+            className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">{t('cancel')}</button>
           <button onClick={handleSave} disabled={processing}
             className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1 sm:gap-2">
-            {processing ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" /> : <Download className="w-3 h-3 sm:w-4 sm:h-4" />} <span className="hidden sm:inline">Save</span>
+            {processing ? <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" /> : <Download className="w-3 h-3 sm:w-4 sm:h-4" />} <span className="hidden sm:inline">{t('save')}</span>
           </button>
         </div>
       </div>
@@ -499,26 +501,26 @@ export function PdfAnnotator() {
 
           {/* Zoom */}
           <div className="flex items-center gap-1 ml-auto shrink-0">
-            <Tooltip content="Zoom out (Ctrl+-)" position="top">
+            <Tooltip content={`${t('zoomOut')} (Ctrl+-)`} position="top">
               <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"><ZoomOut className="w-4 h-4" /></button>
             </Tooltip>
             <span className="text-xs font-mono w-10 sm:w-12 text-center text-gray-700 dark:text-gray-300">{Math.round(zoom * 100)}%</span>
-            <Tooltip content="Zoom in (Ctrl++)" position="top">
+            <Tooltip content={`${t('zoomIn')} (Ctrl++)`} position="top">
               <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"><ZoomIn className="w-4 h-4" /></button>
             </Tooltip>
-            <Tooltip content="Reset zoom (Ctrl+0)" position="top">
+            <Tooltip content={`${t('resetZoom')} (Ctrl+0)`} position="top">
               <button onClick={() => setZoom(1.0)} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hidden sm:block"><Maximize className="w-4 h-4" /></button>
             </Tooltip>
           </div>
 
           {/* Page nav */}
           <div className="flex items-center gap-1 shrink-0">
-            <Tooltip content="Previous page" position="top">
+            <Tooltip content={t('previousPage')} position="top">
               <button onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0 || loading}
                 className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 text-gray-600 dark:text-gray-300"><ChevronLeft className="w-4 h-4" /></button>
             </Tooltip>
             <span className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[3rem] sm:min-w-[4rem] text-center">{currentPage + 1}/{numPages}</span>
-            <Tooltip content="Next page" position="top">
+            <Tooltip content={t('nextPage')} position="top">
               <button onClick={() => setCurrentPage(p => Math.min(numPages - 1, p + 1))} disabled={currentPage === numPages - 1 || loading}
                 className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 text-gray-600 dark:text-gray-300"><ChevronRight className="w-4 h-4" /></button>
             </Tooltip>
@@ -690,8 +692,8 @@ export function PdfAnnotator() {
         {loading || !pageData ? (
           <div className="flex flex-col items-center justify-center h-full">
             <ProcessingState 
-              status={loading ? "Rendering page..." : "Preparing..."}
-              substatus={loading ? `Page ${currentPage + 1} of ${numPages || '?'}` : undefined}
+              status={loading ? t('renderingPage') : t('preparing')}
+              substatus={loading ? `${t('previousPage').replace(' page', '')} ${currentPage + 1} ${t('nextPage').replace(' page', '')} ${numPages || '?'}` : undefined}
             />
           </div>
         ) : (

@@ -7,8 +7,10 @@ import { Trash2, RotateCw, Download, Loader2, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '../Toast';
 import { ProcessingState } from '../ProgressBar';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 export function PdfEditor() {
+  const { t } = useLanguage();
   const { addToast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [pages, setPages] = useState<string[]>([]);
@@ -62,8 +64,8 @@ export function PdfEditor() {
     return (
       <div className="max-w-3xl mx-auto mt-12 px-4">
         <div className="mb-8 text-center">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Edit Pages</h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">Delete or rotate pages</p>
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">{t('editPagesTitle')}</h2>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">{t('editPagesDesc')}</p>
         </div>
         <FileUpload onFilesSelected={handleFileSelect} accept={{ 'application/pdf': ['.pdf'] }} multiple={false} />
       </div>
@@ -78,15 +80,15 @@ export function PdfEditor() {
             <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             {file.name}
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{pages.length} pages</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{t('pagesCount').replace('{n}', String(pages.length))}</p>
         </div>
         <div className="flex gap-3">
           <button onClick={() => { setFile(null); setPages([]); setActions([]); }}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">{t('cancel')}</button>
           <button onClick={handleSave} disabled={processing}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
             {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            Save Changes
+            {t('saveChanges')}
           </button>
         </div>
       </div>
