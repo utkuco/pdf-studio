@@ -8,8 +8,8 @@ import { cn } from '@/lib/utils';
 import { useToast } from '../Toast';
 import { ProgressBar, ProcessingState } from '../ProgressBar';
 import { Tooltip } from '../Tooltip';
-import { KeyboardShortcuts } from '../KeyboardShortcuts';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { KeyboardShortcuts } from '../KeyboardShortcuts';
 
 // Available fonts for text annotation
 const FONTS = [
@@ -1091,9 +1091,101 @@ export function PdfAnnotator() {
                     </div>
                   );
                 }
-                
+
                 return null;
               })}
+
+              {/* FLOATING TOOLBAR — annotation edit toolbar */}
+              {activeTool === 'select' && selectedId && (() => {
+                const sel = (annotations[currentPage] || []).find(a => a.id === selectedId);
+                if (!sel) return null;
+                const t = sel.type;
+                const isText = t === 'text';
+                const isShape = ['rect', 'circle', 'line', 'arrow'].includes(t);
+                const isHighlight = t === 'highlight';
+                const isRectCircle = t === 'rect' || t === 'circle';
+                // Type-narrowed refs to avoid union type errors
+                const textSel = sel as { color: string; bold: boolean; italic: boolean; underline: boolean; opacity?: number };
+                const shapeSel = sel as { strokeColor: string; strokeWidth: number; opacity?: number };
+                const hlSel = sel as { color: string; opacity?: number };
+                const rectSel = sel as { fillColor: string; strokeColor: string };
+                return (
+                  <div
+                    className="absolute z-50 flex items-center gap-0.5 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 px-2 py-1.5"
+                    style={{
+                      left: `${sel.nx * 100}%`,
+                      top: `${(sel.ny - 0.055) * 100}%`,
+                      minWidth: '200px',
+                      pointerEvents: 'all',
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                  >
+                    {(isText || isShape) && (
+                      <div className="flex items-center gap-0.5 mr-1">
+                        {(isText ? ['#000000','#FF0000','#00AA00','#0066FF','#FF6600','#9900FF','#FFFFFF'] : COLOR_PRESETS).map(c => (
+                          <button key={c} title={c}
+                            onClick={() => handlePropertyChange(isText ? { color: c } : { strokeColor: c })}
+                            className={cn("w-5 h-5 rounded-full border-2 transition-transform hover:scale-110", isText ? (textSel.color === c ? "border-blue-500 scale-110" : "border-gray-300 dark:border-gray-600") : (shapeSel.strokeColor === c ? "border-blue-500 scale-110" : "border-gray-300 dark:border-gray-600"))}
+                            style={{ backgroundColor: c }} />
+                        ))}
+                      </div>
+                    )}
+                    {isHighlight && (
+                      <div className="flex items-center gap-0.5 mr-1">
+                        {['#FFFF00','#00FF00','#FFA500','#FF00FF','#00FFFF','#FF6600'].map(c => (
+                          <button key={c} title={c}
+                            onClick={() => handlePropertyChange({ color: c })}
+                            className={cn("w-5 h-5 rounded-full border-2 transition-transform hover:scale-110", hlSel.color === c ? "border-blue-500 scale-110" : "border-gray-300 dark:border-gray-600")}
+                            style={{ backgroundColor: c }} />
+                        ))}
+                      </div>
+                    )}
+                    {isShape && (
+                      <div className="flex items-center gap-0.5 mr-1 border-l border-gray-200 dark:border-gray-700 pl-1">
+                        {[1, 2, 3, 5].map(w => (
+                          <button key={w} title={`${w}px`}
+                            onClick={() => handlePropertyChange({ strokeWidth: w })}
+                            className={cn("w-6 h-6 rounded flex items-center justify-center transition-colors", shapeSel.strokeWidth === w ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600" : "hover:bg-gray-100 dark:hover:bg-gray-800")}>
+                            <div className="bg-current rounded-full" style={{ width: `${Math.min(w * 2, 12)}px`, height: `${Math.min(w * 2, 12)}px` }} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {(isShape || isHighlight) && (
+                      <div className="flex items-center gap-0.5 mr-1 border-l border-gray-200 dark:border-gray-700 pl-1">
+                        {[0.3, 0.6, 0.9, 1].map(o => (
+                          <button key={o} title={`${Math.round(o * 100)}%`}
+                            onClick={() => handlePropertyChange({ opacity: o })}
+                            className={cn("w-6 h-6 rounded text-xs font-medium transition-colors", Math.abs((isShape ? shapeSel.opacity ?? 1 : hlSel.opacity ?? 1) - o) < 0.05 ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600" : "hover:bg-gray-100 dark:hover:bg-gray-800")}>
+                            {Math.round(o * 100)}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {isText && !['✗','✓'].includes(sel.text || '') && (
+                      <div className="flex items-center gap-0.5 mr-1 border-l border-gray-200 dark:border-gray-700 pl-1">
+                        <button title="Bold" onClick={() => handlePropertyChange({ bold: !textSel.bold })}
+                          className={cn("w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-colors", textSel.bold ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600" : "hover:bg-gray-100 dark:hover:bg-gray-800")}>B</button>
+                        <button title="Italic" onClick={() => handlePropertyChange({ italic: !textSel.italic })}
+                          className={cn("w-6 h-6 rounded flex items-center justify-center text-xs italic transition-colors", textSel.italic ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600" : "hover:bg-gray-100 dark:hover:bg-gray-800")}>I</button>
+                        <button title="Underline" onClick={() => handlePropertyChange({ underline: !textSel.underline })}
+                          className={cn("w-6 h-6 rounded flex items-center justify-center text-xs underline transition-colors", textSel.underline ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600" : "hover:bg-gray-100 dark:hover:bg-gray-800")}>U</button>
+                      </div>
+                    )}
+                    {isRectCircle && (
+                      <button title="Toggle fill"
+                        onClick={() => handlePropertyChange({ fillColor: rectSel.fillColor === '#FFFFFF' ? shapeSel.strokeColor : '#FFFFFF' })}
+                        className="w-6 h-6 rounded border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center text-xs mr-1 hover:bg-gray-100 dark:hover:bg-gray-800">
+                        <div className={cn("w-3 h-3 rounded-sm", rectSel.fillColor === '#FFFFFF' ? "bg-transparent border border-gray-400" : "")} style={{ backgroundColor: rectSel.fillColor === '#FFFFFF' ? undefined : rectSel.fillColor }} />
+                      </button>
+                    )}
+                    <button title="Delete" onClick={() => deleteAnnotation(sel.id)}
+                      className="w-6 h-6 rounded flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors ml-1 border-l border-gray-200 dark:border-gray-700 pl-1">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
