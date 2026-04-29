@@ -34,7 +34,7 @@ type AnnotationType =
   | { id: string; type: 'eraser'; nx: number; ny: number; nw: number; nh: number }
   | { id: string; type: 'patch'; nx: number; ny: number; nw: number; nh: number; imageData: string };
 
-type Tool = 'select' | 'eraser' | 'text' | 'move-area' | 'rect' | 'circle' | 'line' | 'arrow' | 'highlight';
+type Tool = 'select' | 'eraser' | 'text' | 'move-area' | 'rect' | 'circle' | 'line' | 'arrow' | 'highlight' | 'stamp-x' | 'stamp-check';
 
 // Color presets
 const COLOR_PRESETS = ['#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FF6600', '#9900FF', '#FFFFFF'];
@@ -67,7 +67,6 @@ export function PdfAnnotator() {
     initialNX: number; initialNY: number; initialNW?: number; initialNH?: number;
   } | null>(null);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
-  const [lastClickPos, setLastClickPos] = useState({ nx: 0.4, ny: 0.4 }); // tracks last click on PDF for stamp placement
   
   // Text properties
   const [textFont, setTextFont] = useState('Arial, sans-serif');
@@ -101,25 +100,6 @@ export function PdfAnnotator() {
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
-  };
-
-  // Insert symbol (✗, ✓) at cursor position in active text annotation
-  const insertSymbol = (symbol: string) => {
-    const ta = textareaRefs.current[editingTextId || ''];
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    // Find the annotation text from current state
-    const allAnns = Object.values(annotations).flat();
-    const target = allAnns.find(a => a.id === editingTextId && a.type === 'text');
-    const current = target ? (target as { text: string }).text : '';
-    const newText = current.substring(0, start) + symbol + current.substring(end);
-    updateAnnotation(editingTextId!, { text: newText });
-    // Move cursor after inserted symbol
-    requestAnimationFrame(() => {
-      ta.selectionStart = ta.selectionEnd = start + symbol.length;
-      ta.focus();
-    });
   };
 
   // Save to history
@@ -291,7 +271,6 @@ export function PdfAnnotator() {
   const handlePointerDown = (e: React.PointerEvent) => {
     if (editingTextId) return;
     const { nx, ny } = getNormalizedCoords(e);
-    setLastClickPos({ nx, ny }); // remember click position for stamp tools
     if (activeTool === 'select') {
       const pageAnns = annotations[currentPage] || [];
       const clickedAnn = [...pageAnns].reverse().find(ann => {
@@ -332,15 +311,25 @@ export function PdfAnnotator() {
           setHighlightOpacity(clickedAnn.opacity);
         }
       } else { setSelectedId(null); }
-    } else if (['eraser', 'text', 'move-area', 'rect', 'circle', 'line', 'arrow', 'highlight'].includes(activeTool)) {
+    } else if (['text', 'rect', 'circle', 'line', 'arrow', 'highlight', 'stamp-x', 'stamp-check'].includes(activeTool)) {
+        // PLACEMENT TOOLS: single click creates object at click position, tool stays active
         if (activeTool === 'text') {
-          // Single click → create text box and enter edit mode immediately
           const newAnn: AnnotationType = { id: Date.now().toString(), type: 'text', nx, ny, nw: 0.12, nh: 0.04, text: '', fontFamily: textFont, fontSize: textSize, color: textColor, bold: textBold, italic: textItalic, underline: textUnderline, align: textAlign, opacity: textOpacity };
           saveToHistory();
           setAnnotations(prev => ({ ...prev, [currentPage]: [...(prev[currentPage] || []), newAnn] }));
-          setEditingTextId(newAnn.id); setSelectedId(newAnn.id); setActiveTool('select');
+          setEditingTextId(newAnn.id); setSelectedId(newAnn.id); // stay on text tool
+        } else if (activeTool === 'stamp-x') {
+          const newAnn: AnnotationType = { id: Date.now().toString(), type: 'text', nx: nx - 0.04, ny: ny - 0.03, nw: 0.08, nh: 0.06, text: '✗', fontFamily: 'Arial, sans-serif', fontSize: 32, color: '#FF0000', bold: true, italic: false, underline: false, align: 'center', opacity: 1 };
+          saveToHistory();
+          setAnnotations(prev => ({ ...prev, [currentPage]: [...(prev[currentPage] || []), newAnn] }));
+          setSelectedId(newAnn.id); // stay on stamp-x tool
+        } else if (activeTool === 'stamp-check') {
+          const newAnn: AnnotationType = { id: Date.now().toString(), type: 'text', nx: nx - 0.04, ny: ny - 0.03, nw: 0.08, nh: 0.06, text: '✓', fontFamily: 'Arial, sans-serif', fontSize: 32, color: '#00AA00', bold: true, italic: false, underline: false, align: 'center', opacity: 1 };
+          saveToHistory();
+          setAnnotations(prev => ({ ...prev, [currentPage]: [...(prev[currentPage] || []), newAnn] }));
+          setSelectedId(newAnn.id); // stay on stamp-check tool
         } else if (['rect', 'circle', 'line', 'arrow', 'highlight'].includes(activeTool)) {
-          // Single click → place shape with default size, no drag needed
+          // Single click → place shape with default size, no drag needed, tool stays active
           const defaults: Record<string, Record<string, unknown>> = {
             rect: { type: 'rect', nw: 0.12, nh: 0.08, strokeColor: shapeStrokeColor, fillColor: shapeFillColor, strokeWidth: shapeStrokeWidth, opacity: shapeOpacity },
             circle: { type: 'circle', nw: 0.1, nh: 0.1, strokeColor: shapeStrokeColor, fillColor: shapeFillColor, strokeWidth: shapeStrokeWidth, opacity: shapeOpacity },
@@ -352,11 +341,11 @@ export function PdfAnnotator() {
           const newAnn = { id: Date.now().toString(), nx, ny, ...d } as AnnotationType;
           saveToHistory();
           setAnnotations(prev => ({ ...prev, [currentPage]: [...(prev[currentPage] || []), newAnn] }));
-          setSelectedId(newAnn.id); setActiveTool('select');
-        } else {
-          // Eraser and move-area still need drag
-          setIsDrawing(true); setDrawStart({ nx, ny }); setDrawCurrent({ nx, ny }); setSelectedId(null);
+          setSelectedId(newAnn.id); // stay on current shape tool
         }
+      } else {
+        // ERASER and MOVE-AREA: need drag, not single click
+        setIsDrawing(true); setDrawStart({ nx, ny }); setDrawCurrent({ nx, ny }); setSelectedId(null);
       }
   };
 
@@ -610,26 +599,16 @@ export function PdfAnnotator() {
                 <ArrowRight className="w-4 h-4" />
               </button>
             </Tooltip>
-            {/* Check / X symbol buttons — click to stamp on PDF at lastClickPos */}
-            <Tooltip content="Place ✗ stamp" position="top">
-              <button onClick={() => {
-                const newAnn: AnnotationType = { id: Date.now().toString(), type: 'text', nx: lastClickPos.nx - 0.04, ny: lastClickPos.ny - 0.03, nw: 0.08, nh: 0.06, text: '✗', fontFamily: 'Arial, sans-serif', fontSize: 32, color: '#FF0000', bold: true, italic: false, underline: false, align: 'center', opacity: 1 };
-                saveToHistory();
-                setAnnotations(prev => ({ ...prev, [currentPage]: [...(prev[currentPage] || []), newAnn] }));
-                setSelectedId(newAnn.id); setActiveTool('select');
-              }}
-                className="p-1.5 sm:p-2 rounded-lg transition-colors text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 text-lg font-bold">
+            {/* X / Check stamp buttons — click button then click PDF to place */}
+            <Tooltip content="✗ Stamp" position="top">
+              <button onClick={() => { setActiveTool('stamp-x'); setSelectedId(null); setEditingTextId(null); }}
+                className={cn("p-1.5 sm:p-2 rounded-lg transition-colors text-lg font-bold", activeTool === 'stamp-x' ? "bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400" : "text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30")}>
                 ✗
               </button>
             </Tooltip>
-            <Tooltip content="Place ✓ stamp" position="top">
-              <button onClick={() => {
-                const newAnn: AnnotationType = { id: Date.now().toString(), type: 'text', nx: lastClickPos.nx - 0.04, ny: lastClickPos.ny - 0.03, nw: 0.08, nh: 0.06, text: '✓', fontFamily: 'Arial, sans-serif', fontSize: 32, color: '#00AA00', bold: true, italic: false, underline: false, align: 'center', opacity: 1 };
-                saveToHistory();
-                setAnnotations(prev => ({ ...prev, [currentPage]: [...(prev[currentPage] || []), newAnn] }));
-                setSelectedId(newAnn.id); setActiveTool('select');
-              }}
-                className="p-1.5 sm:p-2 rounded-lg transition-colors text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 text-lg font-bold">
+            <Tooltip content="✓ Stamp" position="top">
+              <button onClick={() => { setActiveTool('stamp-check'); setSelectedId(null); setEditingTextId(null); }}
+                className={cn("p-1.5 sm:p-2 rounded-lg transition-colors text-lg font-bold", activeTool === 'stamp-check' ? "bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400" : "text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30")}>
                 ✓
               </button>
             </Tooltip>
