@@ -366,8 +366,9 @@ export function PdfAnnotator() {
 
       if (activeTool === 'eraser' && nw > 0.005 && nh > 0.005) {
         addAnnotation({ id: Date.now().toString(), type: 'eraser', nx, ny, nw, nh });
-      } else if (activeTool === 'text' && nw > 0.005 && nh > 0.005) {
-        const newAnn: AnnotationType = { id: Date.now().toString(), type: 'text', nx, ny, nw, nh, text: '', fontFamily: textFont, fontSize: textSize, color: textColor, bold: textBold, italic: textItalic, underline: textUnderline, align: textAlign, opacity: textOpacity };
+      } else if (activeTool === 'text') {
+        // Single click creates a small auto-sized text box that immediately enters edit mode
+        const newAnn: AnnotationType = { id: Date.now().toString(), type: 'text', nx, ny, nw: 0.08, nh: 0.025, text: '', fontFamily: textFont, fontSize: textSize, color: textColor, bold: textBold, italic: textItalic, underline: textUnderline, align: textAlign, opacity: textOpacity };
         addAnnotation(newAnn);
         setEditingTextId(newAnn.id); setSelectedId(newAnn.id); setActiveTool('select');
       } else if (activeTool === 'move-area' && nw > 0.005 && nh > 0.005 && pageData) {
@@ -584,6 +585,19 @@ export function PdfAnnotator() {
                 <ArrowRight className="w-4 h-4" />
               </button>
             </Tooltip>
+            {/* Check / X symbol buttons in toolbar */}
+            <Tooltip content="Insert ✗ (Ctrl+Shift+X)" position="top">
+              <button onClick={() => insertSymbol('✗')}
+                className="p-1.5 sm:p-2 rounded-lg transition-colors text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 text-base font-bold">
+                ✗
+              </button>
+            </Tooltip>
+            <Tooltip content="Insert ✓ (Ctrl+Shift+K)" position="top">
+              <button onClick={() => insertSymbol('✓')}
+                className="p-1.5 sm:p-2 rounded-lg transition-colors text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 text-base font-bold">
+                ✓
+              </button>
+            </Tooltip>
             <Tooltip content="Highlight (H/9)" position="top">
               <button onClick={() => { setActiveTool('highlight'); setSelectedId(null); }}
                 className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'highlight' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
@@ -670,14 +684,6 @@ export function PdfAnnotator() {
                 className={cn("p-1.5 rounded", textAlign === 'right' ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" : "text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600")}><AlignRight className="w-3.5 h-3.5" /></button>
             </div>
 
-            {/* Symbol insert */}
-            <div className="flex gap-0.5">
-              <button onClick={() => insertSymbol('✗')}
-                className="p-1.5 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 text-base font-bold" title="Insert ✗">✗</button>
-              <button onClick={() => insertSymbol('✓')}
-                className="p-1.5 rounded text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 text-base font-bold" title="Insert ✓">✓</button>
-            </div>
-            
             {/* Opacity */}
             <div className="flex items-center gap-1">
               <Droplets className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
@@ -841,16 +847,8 @@ export function PdfAnnotator() {
 
                 // Text annotation
                 if (ann.type === 'text') {
-                  // Dynamic contrast: if page is dark and text is dark, use white for visibility
-                  const isDarkText = (() => {
-                    const c = ann.color.replace('#', '');
-                    const r = parseInt(c.substring(0, 2), 16);
-                    const g = parseInt(c.substring(2, 4), 16);
-                    const b = parseInt(c.substring(4, 6), 16);
-                    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-                    return luminance < 0.5;
-                  })();
-                  const effectiveTextColor = isDarkPage && isDarkText ? '#FFFFFF' : ann.color;
+                  // Dynamic contrast: use white on dark pages; on light pages use annotation color
+                  const effectiveTextColor = isDarkPage ? '#FFFFFF' : ann.color;
 
                   return (
                     <div key={ann.id}
