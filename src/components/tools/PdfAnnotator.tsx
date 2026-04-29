@@ -331,8 +331,30 @@ export function PdfAnnotator() {
         }
       } else { setSelectedId(null); }
     } else if (['eraser', 'text', 'move-area', 'rect', 'circle', 'line', 'arrow', 'highlight'].includes(activeTool)) {
-      setIsDrawing(true); setDrawStart({ nx, ny }); setDrawCurrent({ nx, ny }); setSelectedId(null);
-    }
+        if (activeTool === 'text') {
+          // Single click → create text box and enter edit mode immediately
+          const newAnn: AnnotationType = { id: Date.now().toString(), type: 'text', nx, ny, nw: 0.12, nh: 0.04, text: '', fontFamily: textFont, fontSize: textSize, color: textColor, bold: textBold, italic: textItalic, underline: textUnderline, align: textAlign, opacity: textOpacity };
+          saveToHistory();
+          setAnnotations(prev => ({ ...prev, [currentPage]: [...(prev[currentPage] || []), newAnn] }));
+          setEditingTextId(newAnn.id); setSelectedId(newAnn.id); setActiveTool('select');
+        } else if (['rect', 'circle', 'line', 'arrow', 'highlight'].includes(activeTool)) {
+          // Single click → place shape with default size, no drag needed
+          const defaults = {
+            rect: { type: 'rect' as const, nw: 0.12, nh: 0.08, strokeColor: shapeStrokeColor, fillColor: shapeFillColor, strokeWidth: shapeStrokeWidth, opacity: shapeOpacity },
+            circle: { type: 'circle' as const, nw: 0.1, nh: 0.1, strokeColor: shapeStrokeColor, fillColor: shapeFillColor, strokeWidth: shapeStrokeWidth, opacity: shapeOpacity },
+            line: { type: 'line' as const, nw: 0.15, nh: 0.02, strokeColor: shapeStrokeColor, strokeWidth: shapeStrokeWidth, opacity: shapeOpacity },
+            arrow: { type: 'arrow' as const, nw: 0.15, nh: 0.02, strokeColor: shapeStrokeColor, strokeWidth: shapeStrokeWidth, opacity: shapeOpacity },
+            highlight: { type: 'highlight' as const, nw: 0.12, nh: 0.04, color: highlightColor, opacity: highlightOpacity },
+          };
+          const d = defaults[activeTool as keyof typeof defaults];
+          const newAnn = { id: Date.now().toString(), nx, ny, ...d } as AnnotationType;
+          saveToHistory();
+          setAnnotations(prev => ({ ...prev, [currentPage]: [...(prev[currentPage] || []), newAnn] }));
+          setSelectedId(newAnn.id); setActiveTool('select');
+        } else {
+          setIsDrawing(true); setDrawStart({ nx, ny }); setDrawCurrent({ nx, ny }); setSelectedId(null);
+        }
+      }
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
@@ -585,16 +607,26 @@ export function PdfAnnotator() {
                 <ArrowRight className="w-4 h-4" />
               </button>
             </Tooltip>
-            {/* Check / X symbol buttons in toolbar */}
-            <Tooltip content="Insert ✗ (Ctrl+Shift+X)" position="top">
-              <button onClick={() => insertSymbol('✗')}
-                className="p-1.5 sm:p-2 rounded-lg transition-colors text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 text-base font-bold">
+            {/* Check / X symbol buttons — click to stamp on PDF */}
+            <Tooltip content="Place ✗ stamp" position="top">
+              <button onClick={() => {
+                const newAnn: AnnotationType = { id: Date.now().toString(), type: 'text', nx: 0.42, ny: 0.44, nw: 0.08, nh: 0.06, text: '✗', fontFamily: 'Arial, sans-serif', fontSize: 32, color: '#FF0000', bold: true, italic: false, underline: false, align: 'center', opacity: 1 };
+                saveToHistory();
+                setAnnotations(prev => ({ ...prev, [currentPage]: [...(prev[currentPage] || []), newAnn] }));
+                setSelectedId(newAnn.id); setActiveTool('select');
+              }}
+                className="p-1.5 sm:p-2 rounded-lg transition-colors text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 text-lg font-bold">
                 ✗
               </button>
             </Tooltip>
-            <Tooltip content="Insert ✓ (Ctrl+Shift+K)" position="top">
-              <button onClick={() => insertSymbol('✓')}
-                className="p-1.5 sm:p-2 rounded-lg transition-colors text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 text-base font-bold">
+            <Tooltip content="Place ✓ stamp" position="top">
+              <button onClick={() => {
+                const newAnn: AnnotationType = { id: Date.now().toString(), type: 'text', nx: 0.42, ny: 0.44, nw: 0.08, nh: 0.06, text: '✓', fontFamily: 'Arial, sans-serif', fontSize: 32, color: '#00AA00', bold: true, italic: false, underline: false, align: 'center', opacity: 1 };
+                saveToHistory();
+                setAnnotations(prev => ({ ...prev, [currentPage]: [...(prev[currentPage] || []), newAnn] }));
+                setSelectedId(newAnn.id); setActiveTool('select');
+              }}
+                className="p-1.5 sm:p-2 rounded-lg transition-colors text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 text-lg font-bold">
                 ✓
               </button>
             </Tooltip>
@@ -847,8 +879,10 @@ export function PdfAnnotator() {
 
                 // Text annotation
                 if (ann.type === 'text') {
-                  // Dynamic contrast: use white on dark pages; on light pages use annotation color
-                  const effectiveTextColor = isDarkPage ? '#FFFFFF' : ann.color;
+                  // Stamps (✗/✓) keep their color; other text uses white on dark pages for visibility
+                  const isStamp = ann.text === '✗' || ann.text === '✓';
+                  const pageIsDark = pageData?.isDarkPage ?? isDarkPage;
+                  const effectiveTextColor = isStamp ? ann.color : (pageIsDark ? '#FFFFFF' : ann.color);
 
                   return (
                     <div key={ann.id}
