@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { FileUpload } from '../FileUpload';
 import { renderPdfPageToImage, applyAnnotationsToPdf, downloadFile, getPdfDocument } from '@/lib/pdf-utils';
-import { Download, Loader2, MousePointer2, Eraser, Type, ChevronLeft, ChevronRight, Trash2, FileText, ZoomIn, ZoomOut, Maximize, Move, Square, Circle, Minus, ArrowRight, Highlighter, Undo2, Redo2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Droplets, Keyboard, Pencil, Copy, Check } from 'lucide-react';
+import { Download, Loader2, MousePointer2, Eraser, Type, ChevronLeft, ChevronRight, Trash2, FileText, ZoomIn, ZoomOut, Maximize, Move, Square, Circle, Minus, ArrowRight, Highlighter, Undo2, Redo2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Droplets, Keyboard, Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '../Toast';
 import { ProgressBar, ProcessingState } from '../ProgressBar';
@@ -50,7 +50,8 @@ export function PdfAnnotator() {
   const [file, setFile] = useState<File | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageData, setPageData] = useState<{ image: string, width: number, height: number } | null>(null);
+  const [pageData, setPageData] = useState<{ image: string, width: number, height: number, isDarkPage?: boolean } | null>(null);
+  const [isDarkPage, setIsDarkPage] = useState(false);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [activeTool, setActiveTool] = useState<Tool>('select');
@@ -92,6 +93,33 @@ export function PdfAnnotator() {
   const [historyIndex, setHistoryIndex] = useState(-1);
   
   const overlayRef = useRef<HTMLDivElement>(null);
+  const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+
+  // Auto-resize textarea to fit content
+  const autoResize = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  // Insert symbol (✗, ✓) at cursor position in active text annotation
+  const insertSymbol = (symbol: string) => {
+    const ta = textareaRefs.current[editingTextId || ''];
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    // Find the annotation text from current state
+    const allAnns = Object.values(annotations).flat();
+    const target = allAnns.find(a => a.id === editingTextId && a.type === 'text');
+    const current = target ? (target as { text: string }).text : '';
+    const newText = current.substring(0, start) + symbol + current.substring(end);
+    updateAnnotation(editingTextId!, { text: newText });
+    // Move cursor after inserted symbol
+    requestAnimationFrame(() => {
+      ta.selectionStart = ta.selectionEnd = start + symbol.length;
+      ta.focus();
+    });
+  };
 
   // Save to history
   const saveToHistory = useCallback(() => {
@@ -150,19 +178,78 @@ export function PdfAnnotator() {
       if (!editingTextId && !e.ctrlKey && !e.metaKey && !e.altKey) {
         switch(e.key.toLowerCase()) {
           case 'v': setActiveTool('select'); break;
+          case 'm': setActiveTool('move-area'); break;
+          case 'e': setActiveTool('eraser'); break;
           case 't': setActiveTool('text'); break;
           case 'r': setActiveTool('rect'); break;
           case 'c': setActiveTool('circle'); break;
           case 'l': setActiveTool('line'); break;
           case 'a': setActiveTool('arrow'); break;
           case 'h': setActiveTool('highlight'); break;
-          case 'e': setActiveTool('eraser'); break;
+          // Number shortcuts 1-9
+          case '1': setActiveTool('select'); break;
+          case '2': setActiveTool('move-area'); break;
+          case '3': setActiveTool('eraser'); break;
+          case '4': setActiveTool('text'); break;
+          case '5': setActiveTool('rect'); break;
+          case '6': setActiveTool('circle'); break;
+          case '7': setActiveTool('line'); break;
+          case '8': setActiveTool('arrow'); break;
+          case '9': setActiveTool('highlight'); break;
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedId, undo, redo, editingTextId]);
+
+  // Ctrl+V paste — image clipboard support
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      if (editingTextId) return; // Don't intercept paste while editing text
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const blob = item.getAsFile();
+          if (!blob) return;
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const imageData = ev.target?.result as string;
+            if (!imageData) return;
+            // Determine natural image dimensions for aspect ratio
+            const img = new Image();
+            img.onload = () => {
+              const naturalW = img.width;
+              const naturalH = img.height;
+              // Place image centered on current page viewport (25% of page width as default size)
+              const defaultW = 0.25;
+              const defaultH = defaultW * (naturalH / naturalW);
+              const nx = 0.375; // center: (1 - 0.25) / 2
+              const ny = 0.5 - defaultH / 2;
+              saveToHistory();
+              setAnnotations(prev => ({
+                ...prev,
+                [currentPage]: [...(prev[currentPage] || []), {
+                  id: Date.now().toString(),
+                  type: 'patch' as const,
+                  nx, ny, nw: defaultW, nh: defaultH,
+                  imageData
+                }]
+              }));
+              setActiveTool('select');
+            };
+            img.src = imageData;
+          };
+          reader.readAsDataURL(blob);
+          return;
+        }
+      }
+    };
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [editingTextId, currentPage, saveToHistory]);
 
   const handleFileSelect = async (files: File[]) => {
     if (files.length === 0) return;
@@ -185,6 +272,7 @@ export function PdfAnnotator() {
     try {
       const data = await renderPdfPageToImage(f, pageIndex, 2.0);
       setPageData(data);
+      setIsDarkPage(data.isDarkPage ?? false);
     } catch (error) { console.error("Error rendering page:", error); }
     finally { setLoading(false); }
   };
@@ -254,8 +342,12 @@ export function PdfAnnotator() {
     } else if (interaction) {
       const dx = nx - interaction.startNX;
       const dy = ny - interaction.startNY;
-      if (interaction.type === 'move') updateAnnotation(interaction.id, { nx: interaction.initialNX + dx, ny: interaction.initialNY + dy });
-      else if (interaction.type === 'resize') updateAnnotation(interaction.id, { nw: Math.max(0.01, (interaction.initialNW || 0) + dx), nh: Math.max(0.01, (interaction.initialNH || 0) + dy) });
+      // Only update position for move, not for resize (resize only changes dimensions — prevents ghosting)
+      if (interaction.type === 'move') {
+        updateAnnotation(interaction.id, { nx: interaction.initialNX + dx, ny: interaction.initialNY + dy });
+      } else if (interaction.type === 'resize') {
+        updateAnnotation(interaction.id, { nw: Math.max(0.01, (interaction.initialNW || 0) + dx), nh: Math.max(0.01, (interaction.initialNH || 0) + dy) });
+      }
     }
   };
 
@@ -321,6 +413,7 @@ export function PdfAnnotator() {
 
   const startMove = (e: React.PointerEvent, ann: AnnotationType) => {
     if (activeTool !== 'select') return;
+    if (interaction) return; // Don't start move if already interacting (e.g., resizing)
     e.stopPropagation(); setSelectedId(ann.id);
     if (ann.type === 'text') {
       setTextFont(ann.fontFamily);
@@ -437,25 +530,25 @@ export function PdfAnnotator() {
 
           {/* Main tools */}
           <div className="flex gap-0.5 sm:gap-1 shrink-0">
-            <Tooltip content="Select (V)" position="top">
+            <Tooltip content="Select (V/1)" position="top">
               <button onClick={() => { setActiveTool('select'); setSelectedId(null); }}
                 className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'select' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
                 <MousePointer2 className="w-4 h-4" />
               </button>
             </Tooltip>
-            <Tooltip content="Move Area" position="top">
+            <Tooltip content="Move Area (M/2)" position="top">
               <button onClick={() => { setActiveTool('move-area'); setSelectedId(null); }}
                 className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'move-area' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
                 <Move className="w-4 h-4" />
               </button>
             </Tooltip>
-            <Tooltip content="Eraser (E)" position="top">
+            <Tooltip content="Eraser (E/3)" position="top">
               <button onClick={() => { setActiveTool('eraser'); setSelectedId(null); }}
                 className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'eraser' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
                 <Eraser className="w-4 h-4" />
               </button>
             </Tooltip>
-            <Tooltip content="Text (T)" position="top">
+            <Tooltip content="Text (T/4)" position="top">
               <button onClick={() => { setActiveTool('text'); setSelectedId(null); }}
                 className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'text' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
                 <Type className="w-4 h-4" />
@@ -467,31 +560,31 @@ export function PdfAnnotator() {
 
           {/* Shape tools */}
           <div className="flex gap-0.5 sm:gap-1 shrink-0">
-            <Tooltip content="Rectangle (R)" position="top">
+            <Tooltip content="Rectangle (R/5)" position="top">
               <button onClick={() => { setActiveTool('rect'); setSelectedId(null); }}
                 className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'rect' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
                 <Square className="w-4 h-4" />
               </button>
             </Tooltip>
-            <Tooltip content="Circle (C)" position="top">
+            <Tooltip content="Circle (C/6)" position="top">
               <button onClick={() => { setActiveTool('circle'); setSelectedId(null); }}
                 className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'circle' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
                 <Circle className="w-4 h-4" />
               </button>
             </Tooltip>
-            <Tooltip content="Line (L)" position="top">
+            <Tooltip content="Line (L/7)" position="top">
               <button onClick={() => { setActiveTool('line'); setSelectedId(null); }}
                 className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'line' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
                 <Minus className="w-4 h-4" />
               </button>
             </Tooltip>
-            <Tooltip content="Arrow (A)" position="top">
+            <Tooltip content="Arrow (A/8)" position="top">
               <button onClick={() => { setActiveTool('arrow'); setSelectedId(null); }}
                 className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'arrow' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </Tooltip>
-            <Tooltip content="Highlight (H)" position="top">
+            <Tooltip content="Highlight (H/9)" position="top">
               <button onClick={() => { setActiveTool('highlight'); setSelectedId(null); }}
                 className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'highlight' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
                 <Highlighter className="w-4 h-4" />
@@ -575,6 +668,14 @@ export function PdfAnnotator() {
                 className={cn("p-1.5 rounded", textAlign === 'center' ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" : "text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600")}><AlignCenter className="w-3.5 h-3.5" /></button>
               <button onClick={() => { setTextAlign('right'); handlePropertyChange({ align: 'right' }); }}
                 className={cn("p-1.5 rounded", textAlign === 'right' ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" : "text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600")}><AlignRight className="w-3.5 h-3.5" /></button>
+            </div>
+
+            {/* Symbol insert */}
+            <div className="flex gap-0.5">
+              <button onClick={() => insertSymbol('✗')}
+                className="p-1.5 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 text-base font-bold" title="Insert ✗">✗</button>
+              <button onClick={() => insertSymbol('✓')}
+                className="p-1.5 rounded text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 text-base font-bold" title="Insert ✓">✓</button>
             </div>
             
             {/* Opacity */}
@@ -697,17 +798,32 @@ export function PdfAnnotator() {
             />
           </div>
         ) : (
-          <div className="relative shadow-2xl bg-white dark:bg-gray-800 origin-top transition-transform duration-200 rounded-lg overflow-hidden" style={{ width: 'fit-content', height: 'fit-content', transform: `scale(${zoom})` }}>
+          <div className="relative shadow-2xl origin-top transition-transform duration-200 rounded-lg overflow-hidden will-change-transform"
+            style={{
+              width: 'fit-content', height: 'fit-content', transform: `scale(${zoom})`,
+              // Dynamic contrast: invert background based on PDF page brightness
+              backgroundColor: isDarkPage ? '#1a1a1a' : '#f0f0f0',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            }}
+          >
             <img src={pageData.image} alt={`Page ${currentPage + 1}`} className="max-w-full h-auto block select-none" draggable={false} />
             <div ref={overlayRef}
-              className={cn("absolute inset-0 z-10",
+              className={cn("absolute inset-0 z-10 overflow-hidden",
                 activeTool === 'eraser' ? "cursor-crosshair" :
                 activeTool === 'text' ? "cursor-text" :
                 activeTool === 'highlight' ? "cursor-crosshair" :
                 ['rect', 'circle', 'line', 'arrow'].includes(activeTool) ? "cursor-crosshair" :
                 "cursor-default")}
               onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}>
-              
+              {/* SVG hatching pattern for selection overlay */}
+              <svg width="0" height="0" style={{ position: 'absolute' }}>
+                <defs>
+                  <pattern id="selection-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+                    <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(59,130,246,0.6)" strokeWidth="2" />
+                  </pattern>
+                </defs>
+              </svg>
+
               {/* Drawing preview */}
               {isDrawing && (
                 <div className="absolute border-2 border-dashed border-blue-500 bg-blue-50/30 pointer-events-none"
@@ -722,38 +838,51 @@ export function PdfAnnotator() {
               {/* Render annotations */}
               {currentAnnotations.map(ann => {
                 const isSelected = selectedId === ann.id;
-                
+
                 // Text annotation
                 if (ann.type === 'text') {
+                  // Dynamic contrast: if page is dark and text is dark, use white for visibility
+                  const isDarkText = (() => {
+                    const c = ann.color.replace('#', '');
+                    const r = parseInt(c.substring(0, 2), 16);
+                    const g = parseInt(c.substring(2, 4), 16);
+                    const b = parseInt(c.substring(4, 6), 16);
+                    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                    return luminance < 0.5;
+                  })();
+                  const effectiveTextColor = isDarkPage && isDarkText ? '#FFFFFF' : ann.color;
+
                   return (
                     <div key={ann.id}
-                      className={cn("absolute group", activeTool === 'select' && "cursor-move", isSelected && "z-20")}
+                      className={cn("absolute group", activeTool === 'select' && "cursor-text", isSelected && "z-20")}
                       style={{ left: `${ann.nx * 100}%`, top: `${ann.ny * 100}%`, width: `${ann.nw * 100}%`, height: `${ann.nh * 100}%`, opacity: ann.opacity }}
-                      onPointerDown={(e) => startMove(e, ann)}
-                      onDoubleClick={(e) => { e.stopPropagation(); setEditingTextId(ann.id); }}>
-                      {/* Selection border */}
-                      {isSelected && (
-                        <div className="absolute inset-0 border-2 border-blue-500 rounded pointer-events-none" />
+                      onPointerDown={(e) => {
+                        if (editingTextId === ann.id) return; // Don't move while editing text
+                        startMove(e, ann);
+                      }}
+                      onClick={(e) => { e.stopPropagation(); setEditingTextId(ann.id); }}>
+                      {/* Selection border — NO background fill for text annotations */}
+                      {isSelected && !editingTextId && (
+                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-30" style={{ overflow: 'visible' }}>
+                          <rect x="0" y="0" width="100%" height="100%" fill="none" stroke={isDarkPage ? "rgba(255,255,255,0.9)" : "rgba(59,130,246,0.9)"} strokeWidth="2" rx="1" strokeDasharray="4 2" />
+                        </svg>
                       )}
                       {editingTextId === ann.id ? (
-                        <textarea autoFocus value={ann.text}
-                          onChange={(e) => updateAnnotation(ann.id, { text: e.target.value })}
+                        <textarea autoFocus ref={(el) => { textareaRefs.current[ann.id] = el; autoResize(el); }}
+                          value={ann.text}
+                          onChange={(e) => { updateAnnotation(ann.id, { text: e.target.value }); autoResize(e.target); }}
                           onBlur={() => setEditingTextId(null)}
-                          className="w-full h-full bg-white dark:bg-gray-700 border border-blue-300 dark:border-blue-600 rounded p-1 text-xs resize-none outline-none"
-                          style={{ fontFamily: ann.fontFamily, fontSize: `${ann.fontSize}px`, color: ann.color, fontWeight: ann.bold ? 'bold' : 'normal', fontStyle: ann.italic ? 'italic' : 'normal', textDecoration: ann.underline ? 'underline' : 'none', textAlign: ann.align }} />
+                          className="w-full min-h-6 bg-transparent border border-blue-400 dark:border-blue-500 rounded p-1 text-xs resize-none outline-none overflow-hidden"
+                          style={{ fontFamily: ann.fontFamily, fontSize: `${ann.fontSize}px`, color: effectiveTextColor, fontWeight: ann.bold ? 'bold' : 'normal', fontStyle: ann.italic ? 'italic' : 'normal', textDecoration: ann.underline ? 'underline' : 'none', textAlign: ann.align }} />
                       ) : (
                         <div className="w-full h-full flex items-center overflow-hidden p-1"
-                          style={{ fontFamily: ann.fontFamily, fontSize: `${ann.fontSize}px`, color: ann.color, fontWeight: ann.bold ? 'bold' : 'normal', fontStyle: ann.italic ? 'italic' : 'normal', textDecoration: ann.underline ? 'underline' : 'none', textAlign: ann.align, justifyContent: ann.align === 'center' ? 'center' : ann.align === 'right' ? 'flex-end' : 'flex-start' }}>
+                          style={{ fontFamily: ann.fontFamily, fontSize: `${ann.fontSize}px`, color: effectiveTextColor, fontWeight: ann.bold ? 'bold' : 'normal', fontStyle: ann.italic ? 'italic' : 'normal', textDecoration: ann.underline ? 'underline' : 'none', textAlign: ann.align, justifyContent: ann.align === 'center' ? 'center' : ann.align === 'right' ? 'flex-end' : 'flex-start' }}>
                           {ann.text || <span className="text-gray-400 dark:text-gray-500 italic">Click to edit...</span>}
                         </div>
                       )}
-                      {/* Action buttons */}
-                      {activeTool === 'select' && (
-                        <div className={cn("absolute -top-8 left-1/2 -translate-x-1/2 flex gap-1 transition-opacity", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
-                          <button onClick={(e) => { e.stopPropagation(); setEditingTextId(ann.id); }}
-                            className="bg-blue-500 hover:bg-blue-600 text-white p-1 rounded-full transition-colors">
-                            <Pencil className="w-3 h-3" />
-                          </button>
+                      {/* Delete button only — edit is 1-click now */}
+                      {activeTool === 'select' && isSelected && !editingTextId && (
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex gap-1 transition-opacity opacity-100">
                           <button onClick={(e) => { e.stopPropagation(); deleteAnnotation(ann.id); }}
                             className="bg-red-500 hover:bg-red-600 text-white p-1 rounded-full transition-colors">
                             <Trash2 className="w-3 h-3" />
@@ -771,9 +900,13 @@ export function PdfAnnotator() {
                       className={cn("absolute group", activeTool === 'select' && "cursor-move", isSelected && "z-20")}
                       style={{ left: `${ann.nx * 100}%`, top: `${ann.ny * 100}%`, width: `${ann.nw * 100}%`, height: `${ann.nh * 100}%`, opacity: ann.opacity }}
                       onPointerDown={(e) => startMove(e, ann)} onPointerDownCapture={(e) => { if (activeTool === 'select') startResize(e, ann); }}>
-                      {/* Selection border */}
+                      {/* Selection border with hatching — visible on both light and dark backgrounds */}
                       {isSelected && (
-                        <div className="absolute inset-0 border-2 border-blue-500 rounded-sm pointer-events-none" />
+                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-30" style={{ overflow: 'visible' }}>
+                          <rect x="0" y="0" width="100%" height="100%" fill={isDarkPage ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)"} />
+                          <rect x="0" y="0" width="100%" height="100%" fill="url(#selection-hatch)" />
+                          <rect x="0" y="0" width="100%" height="100%" fill="none" stroke={isDarkPage ? "rgba(255,255,255,0.9)" : "rgba(59,130,246,0.9)"} strokeWidth="2" rx="1" />
+                        </svg>
                       )}
                       <div className="w-full h-full" style={{ border: `${ann.strokeWidth}px solid ${ann.strokeColor}`, backgroundColor: ann.fillColor === '#FFFFFF' ? 'transparent' : ann.fillColor }} />
                       {/* Action buttons */}
@@ -796,9 +929,13 @@ export function PdfAnnotator() {
                       className={cn("absolute group", activeTool === 'select' && "cursor-move", isSelected && "z-20")}
                       style={{ left: `${ann.nx * 100}%`, top: `${ann.ny * 100}%`, width: `${ann.nw * 100}%`, height: `${ann.nh * 100}%`, opacity: ann.opacity }}
                       onPointerDown={(e) => startMove(e, ann)} onPointerDownCapture={(e) => { if (activeTool === 'select') startResize(e, ann); }}>
-                      {/* Selection border */}
+                      {/* Selection border with hatching — visible on both light and dark backgrounds */}
                       {isSelected && (
-                        <div className="absolute inset-0 border-2 border-blue-500 rounded-full pointer-events-none" />
+                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-30" style={{ overflow: 'visible' }}>
+                          <rect x="0" y="0" width="100%" height="100%" fill={isDarkPage ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)"} />
+                          <rect x="0" y="0" width="100%" height="100%" fill="url(#selection-hatch)" />
+                          <rect x="0" y="0" width="100%" height="100%" fill="none" stroke={isDarkPage ? "rgba(255,255,255,0.9)" : "rgba(59,130,246,0.9)"} strokeWidth="2" rx="1" />
+                        </svg>
                       )}
                       <div className="w-full h-full rounded-full" style={{ border: `${ann.strokeWidth}px solid ${ann.strokeColor}`, backgroundColor: ann.fillColor === '#FFFFFF' ? 'transparent' : ann.fillColor }} />
                       {/* Action buttons */}
@@ -825,9 +962,13 @@ export function PdfAnnotator() {
                       className={cn("absolute group", activeTool === 'select' && "cursor-move", isSelected && "z-20")}
                       style={{ left: `${ann.nx * 100}%`, top: `${ann.ny * 100}%`, width: `${ann.nw * 100}%`, height: `${ann.nh * 100}%`, opacity: ann.opacity }}
                       onPointerDown={(e) => startMove(e, ann)}>
-                      {/* Selection indicator */}
+                      {/* Selection indicator with hatching — visible on both light and dark backgrounds */}
                       {isSelected && (
-                        <div className="absolute inset-0 border-2 border-blue-500 pointer-events-none rounded-sm" />
+                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-30" style={{ overflow: 'visible' }}>
+                          <rect x="0" y="0" width="100%" height="100%" fill={isDarkPage ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)"} />
+                          <rect x="0" y="0" width="100%" height="100%" fill="url(#selection-hatch)" />
+                          <rect x="0" y="0" width="100%" height="100%" fill="none" stroke={isDarkPage ? "rgba(255,255,255,0.9)" : "rgba(59,130,246,0.9)"} strokeWidth="2" rx="1" />
+                        </svg>
                       )}
                       <div className="w-full h-full relative" style={{ transform: `rotate(${angle}deg)`, transformOrigin: '0 50%' }}>
                         <div className="absolute w-full bg-current" style={{ height: `${ann.strokeWidth}px`, backgroundColor: ann.strokeColor }} />
@@ -855,9 +996,13 @@ export function PdfAnnotator() {
                       className={cn("absolute group", activeTool === 'select' && "cursor-move", isSelected && "z-20")}
                       style={{ left: `${ann.nx * 100}%`, top: `${ann.ny * 100}%`, width: `${ann.nw * 100}%`, height: `${ann.nh * 100}%`, opacity: ann.opacity }}
                       onPointerDown={(e) => startMove(e, ann)}>
-                      {/* Selection indicator */}
+                      {/* Selection indicator with hatching — visible on both light and dark backgrounds */}
                       {isSelected && (
-                        <div className="absolute inset-0 border-2 border-blue-500 pointer-events-none rounded-sm" />
+                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-30" style={{ overflow: 'visible' }}>
+                          <rect x="0" y="0" width="100%" height="100%" fill={isDarkPage ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)"} />
+                          <rect x="0" y="0" width="100%" height="100%" fill="url(#selection-hatch)" />
+                          <rect x="0" y="0" width="100%" height="100%" fill="none" stroke={isDarkPage ? "rgba(255,255,255,0.9)" : "rgba(59,130,246,0.9)"} strokeWidth="2" rx="1" />
+                        </svg>
                       )}
                       <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
                         <defs>
@@ -887,9 +1032,13 @@ export function PdfAnnotator() {
                       className={cn("absolute group", activeTool === 'select' && "cursor-move", isSelected && "z-20")}
                       style={{ left: `${ann.nx * 100}%`, top: `${ann.ny * 100}%`, width: `${ann.nw * 100}%`, height: `${ann.nh * 100}%`, opacity: ann.opacity, backgroundColor: ann.color }}
                       onPointerDown={(e) => startMove(e, ann)} onPointerDownCapture={(e) => { if (activeTool === 'select') startResize(e, ann); }}>
-                      {/* Selection border */}
+                      {/* Selection border with hatching — visible on both light and dark backgrounds */}
                       {isSelected && (
-                        <div className="absolute inset-0 border-2 border-blue-500 pointer-events-none" />
+                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-30" style={{ overflow: 'visible' }}>
+                          <rect x="0" y="0" width="100%" height="100%" fill={isDarkPage ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)"} />
+                          <rect x="0" y="0" width="100%" height="100%" fill="url(#selection-hatch)" />
+                          <rect x="0" y="0" width="100%" height="100%" fill="none" stroke={isDarkPage ? "rgba(255,255,255,0.9)" : "rgba(59,130,246,0.9)"} strokeWidth="2" rx="1" />
+                        </svg>
                       )}
                       {/* Action buttons */}
                       {activeTool === 'select' && (

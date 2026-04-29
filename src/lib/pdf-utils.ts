@@ -1,4 +1,4 @@
-import { PDFDocument, degrees, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, degrees, StandardFonts, rgb } from 'pdf-lib-plus-encrypt';
 
 // Lazy load pdfjs-dist to avoid SSR issues
 // Use dynamic import with proper worker configuration
@@ -115,7 +115,7 @@ export async function renderPdfPageToImage(
   file: File,
   pageIndex: number,
   scale: number = 2.0
-): Promise<{ image: string; width: number; height: number }> {
+): Promise<{ image: string; width: number; height: number; isDarkPage: boolean }> {
   const pdf = await getPdfDocument(file);
   const page = await pdf.getPage(pageIndex + 1);
   const viewport = page.getViewport({ scale });
@@ -127,10 +127,30 @@ export async function renderPdfPageToImage(
   canvas.width = viewport.width;
   await page.render({ canvasContext: context, viewport }).promise;
 
+  // Detect if page is dark by sampling pixels (dynamic contrast)
+  const isDarkPage = (() => {
+    try {
+      const imgData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imgData.data;
+      let totalLuminance = 0;
+      const sampleCount = Math.min(data.length / 4, 2000); // sample up to 2000 pixels
+      const step = Math.max(1, Math.floor(data.length / 4 / sampleCount));
+      for (let i = 0; i < sampleCount * 4; i += step * 4) {
+        const r = data[i], g = data[i + 1], b = data[i + 2];
+        totalLuminance += (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      }
+      const avgLuminance = totalLuminance / sampleCount;
+      return avgLuminance < 0.45; // dark if avg luminance < 45%
+    } catch {
+      return false; // fallback: assume light
+    }
+  })();
+
   return {
     image: canvas.toDataURL('image/png'),
     width: viewport.width,
     height: viewport.height,
+    isDarkPage,
   };
 }
 
@@ -324,14 +344,25 @@ export function downloadFile(
   URL.revokeObjectURL(url);
 }
 
-// PDF Encryption using @pdfsmaller/pdf-encrypt-lite (RC4 128-bit)
+// PDF Encryption using pdf-lib-plus-encrypt (AES-256)
+// pdf-lib-plus-encrypt is a drop-in replacement for pdf-lib with built-in encryption support
 // Decryption requires server-side processing due to browser security restrictions
 
 export async function encryptPdf(file: File, password: string): Promise<Uint8Array> {
-  const { encryptPDF } = await import('@pdfsmaller/pdf-encrypt-lite');
   const arrayBuffer = await file.arrayBuffer();
-  const pdfBytes = new Uint8Array(arrayBuffer);
-  return await encryptPDF(pdfBytes, password, password);
+  const pdfDoc = await PDFDocument.load(arrayBuffer);
+  await pdfDoc.encrypt({
+    userPassword: password,
+    permissions: {
+      printing: true,
+      modifying: true,
+      copying: true,
+      annotating: true,
+      fillingForms: true,
+    },
+    pdfVersion: '1.7ext3', // V=5 encryption = AES-256
+  });
+  return await pdfDoc.save();
 }
 
 export async function decryptPdf(file: File, password: string): Promise<Uint8Array> {
