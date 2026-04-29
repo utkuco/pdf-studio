@@ -441,9 +441,16 @@ export function PdfAnnotator() {
   };
 
   const startResize = (e: React.PointerEvent, ann: AnnotationType) => {
-    if (activeTool !== 'select' || ann.type === 'text' || ann.type === 'line' || ann.type === 'arrow') return;
+    if (activeTool !== 'select') return;
+    if (interaction) return; // Don't override an existing interaction
+    if (ann.type !== 'rect' && ann.type !== 'circle' && ann.type !== 'highlight') return;
     e.stopPropagation();
     const { nx, ny } = getNormalizedCoords(e);
+    // Only resize if click is near a corner (within 15% of annotation size)
+    const CORNER_THRESHOLD = 0.15;
+    const leftSide = nx < ann.nx + CORNER_THRESHOLD * ann.nw || nx > ann.nx + (1 - CORNER_THRESHOLD) * ann.nw;
+    const topSide = ny < ann.ny + CORNER_THRESHOLD * ann.nh || ny > ann.ny + (1 - CORNER_THRESHOLD) * ann.nh;
+    if (!leftSide && !topSide) return; // Not near a corner → don't resize
     setInteraction({ id: ann.id, type: 'resize', startNX: nx, startNY: ny, initialNX: ann.nx, initialNY: ann.ny, initialNW: ann.nw, initialNH: ann.nh });
   };
 

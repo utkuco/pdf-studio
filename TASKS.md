@@ -16,6 +16,7 @@ Fix remaining 3 items from Batuhan's list: UI fixes (dynamic contrast, selection
 - [x] Item 2: UI — dynamic contrast (inverse/halo), selection hatching overlay (white overlay+pulse border dark / blue hatching light), ghosting during resize (startMove guard + separated move/resize handlePointerMove), will-change:transform on overlays. Build: ✓
 - [x] Item 3: Editor — auto-resize textarea, Ctrl+V PNG paste, 1-9 keyboard shortcuts (V/M/E/T/R/C/L/A/H + 1-9), ✗✓ symbol insert buttons with cursor-position insert. Build: ✓
 - [x] TR: allToolsSubtitle 'Beş'→'Yedi', ES: 'Cinco'→'Siete'
+- [x] Floating annotation toolbar — appears above selected annotation with inline color swatches, stroke width, opacity %, B/I/U style, fill toggle (rect/circle), delete. Deploy: pdftoolstudio.com. Commit: 00cb7e1. Build: ✓
 
 ## Blocked
 - None
