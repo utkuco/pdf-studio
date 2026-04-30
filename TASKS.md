@@ -7,6 +7,8 @@ Fix remaining 3 items from Batuhan's list: UI fixes (dynamic contrast, selection
 
 ## In Progress
 - [ ] Item 4: Workflow — undo/redo after save, Save vs Export separation, Drag&Drop page reordering
+- [ ] Verify move/resize fix in browser (resizeLockRef + setSelectedId in startResize)
+- [ ] Verify save fix in browser (hexToRgb 3-char fix + handleSave nested try/catch)
 
 ## Next
 - (none)
@@ -17,6 +19,12 @@ Fix remaining 3 items from Batuhan's list: UI fixes (dynamic contrast, selection
 - [x] Item 3: Editor — auto-resize textarea, Ctrl+V PNG paste, 1-9 keyboard shortcuts (V/M/E/T/R/C/L/A/H + 1-9), ✗✓ symbol insert buttons with cursor-position insert. Build: ✓
 - [x] TR: allToolsSubtitle 'Beş'→'Yedi', ES: 'Cinco'→'Siete'
 - [x] Floating annotation toolbar — appears above selected annotation with inline color swatches, stroke width, opacity %, B/I/U style, fill toggle (rect/circle), delete. Deploy: pdftoolstudio.com. Commit: 00cb7e1. Build: ✓
+- [x] Select tool move vs resize — resize only from corners (15% threshold), non-corner drags → move annotation. Fixed capture-phase conflict (startResize was always winning via onPointerDownCapture). Commit: 3cdf309. Build: ✓
+- [x] Annotation interaction bugs (3 fixes):
+  - Bug 1: `startResize` OR→AND corner detection — `!leftSide && !topSide` → `(leftSide||rightSide) && (topSide||bottomSide)`. Commit: [patched]. Build: ✓
+  - Bug 2: `onClick` removed from text annotation div → no more accidental edit on click. Edit now requires floating toolbar ✏️ button. Commit: [patched]. Build: ✓
+  - Bug 3: `select` tool button now calls `setEditingTextId(null)` — switching to select closes any open textarea. Commit: [patched]. Build: ✓
+  - Floating toolbar: ✏️ (blue/pencil) + 🗑️ (red/trash) buttons appear above selected text/stamp annotations in select mode. Pencil icon added to imports. Commit: [patched]. Build: ✓
 
 ## Blocked
 - None

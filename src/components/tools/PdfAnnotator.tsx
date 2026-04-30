@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { FileUpload } from '../FileUpload';
 import { renderPdfPageToImage, applyAnnotationsToPdf, downloadFile, getPdfDocument } from '@/lib/pdf-utils';
-import { Download, Loader2, MousePointer2, Eraser, Type, ChevronLeft, ChevronRight, Trash2, FileText, ZoomIn, ZoomOut, Maximize, Move, Square, Circle, Minus, ArrowRight, Highlighter, Undo2, Redo2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Droplets, Keyboard, Copy, Check } from 'lucide-react';
+import { Download, Loader2, MousePointer2, Eraser, Type, ChevronLeft, ChevronRight, Trash2, FileText, ZoomIn, ZoomOut, Maximize, Move, Square, Circle, Minus, ArrowRight, Highlighter, Undo2, Redo2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Droplets, Keyboard, Copy, Check, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '../Toast';
 import { ProgressBar, ProcessingState } from '../ProgressBar';
@@ -94,6 +94,10 @@ export function PdfAnnotator() {
   
   const overlayRef = useRef<HTMLDivElement>(null);
   const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+  // Synchronous flag to prevent move from racing with resize state update
+  const resizeLockRef = useRef(false);
+  // Track active pointer ID for release
+  const pointerIdRef = useRef<number | null>(null);
 
   // Auto-resize textarea to fit content
   const autoResize = (el: HTMLTextAreaElement | null) => {
@@ -265,12 +269,16 @@ export function PdfAnnotator() {
   const getNormalizedCoords = (e: React.PointerEvent | PointerEvent) => {
     if (!overlayRef.current) return { nx: 0, ny: 0 };
     const rect = overlayRef.current.getBoundingClientRect();
-    return { nx: (e.clientX - rect.left) / rect.width, ny: (e.clientY - rect.top) / rect.height };
+    const nx = (e.clientX - rect.left) / rect.width;
+    const ny = (e.clientY - rect.top) / rect.height;
+    console.log('[DEBUG getNormalizedCoords]', { clientX: e.clientX, clientY: e.clientY, rectLeft: rect.left, rectTop: rect.top, rectWidth: rect.width, rectHeight: rect.height, nx, ny });
+    return { nx, ny };
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (editingTextId) return;
     const { nx, ny } = getNormalizedCoords(e);
+    console.log('[DEBUG handlePointerDown]', { activeTool, nx, ny, interaction: !!interaction });
     if (activeTool === 'select') {
       const pageAnns = annotations[currentPage] || [];
       const clickedAnn = [...pageAnns].reverse().find(ann => {
@@ -311,7 +319,7 @@ export function PdfAnnotator() {
           setHighlightOpacity(clickedAnn.opacity);
         }
       } else { setSelectedId(null); }
-    } else if (['text', 'rect', 'circle', 'line', 'arrow', 'highlight', 'stamp-x', 'stamp-check'].includes(activeTool)) {
+    } else if (['rect', 'circle', 'line', 'arrow', 'stamp-x', 'stamp-check'].includes(activeTool)) {
         // PLACEMENT TOOLS: single click creates object at click position, tool stays active
         if (activeTool === 'text') {
           const newAnn: AnnotationType = { id: Date.now().toString(), type: 'text', nx, ny, nw: 0.12, nh: 0.04, text: '', fontFamily: textFont, fontSize: textSize, color: textColor, bold: textBold, italic: textItalic, underline: textUnderline, align: textAlign, opacity: textOpacity };
@@ -328,14 +336,13 @@ export function PdfAnnotator() {
           saveToHistory();
           setAnnotations(prev => ({ ...prev, [currentPage]: [...(prev[currentPage] || []), newAnn] }));
           setSelectedId(newAnn.id); // stay on stamp-check tool
-        } else if (['rect', 'circle', 'line', 'arrow', 'highlight'].includes(activeTool)) {
+        } else if (['rect', 'circle', 'line', 'arrow'].includes(activeTool)) {
           // Single click → place shape with default size, no drag needed, tool stays active
           const defaults: Record<string, Record<string, unknown>> = {
             rect: { type: 'rect', nw: 0.12, nh: 0.08, strokeColor: shapeStrokeColor, fillColor: shapeFillColor, strokeWidth: shapeStrokeWidth, opacity: shapeOpacity },
             circle: { type: 'circle', nw: 0.1, nh: 0.1, strokeColor: shapeStrokeColor, fillColor: shapeFillColor, strokeWidth: shapeStrokeWidth, opacity: shapeOpacity },
             line: { type: 'line', nw: 0.15, nh: 0.02, strokeColor: shapeStrokeColor, strokeWidth: shapeStrokeWidth, opacity: shapeOpacity },
             arrow: { type: 'arrow', nw: 0.15, nh: 0.02, strokeColor: shapeStrokeColor, strokeWidth: shapeStrokeWidth, opacity: shapeOpacity },
-            highlight: { type: 'highlight', nw: 0.12, nh: 0.04, color: highlightColor, opacity: highlightOpacity },
           };
           const d = defaults[activeTool];
           const newAnn = { id: Date.now().toString(), nx, ny, ...d } as AnnotationType;
@@ -344,12 +351,16 @@ export function PdfAnnotator() {
           setSelectedId(newAnn.id); // stay on current shape tool
         }
       } else {
-        // ERASER and MOVE-AREA: need drag, not single click
+        // ERASER, HIGHLIGHT, and MOVE-AREA: need drag, not single click
         setIsDrawing(true); setDrawStart({ nx, ny }); setDrawCurrent({ nx, ny }); setSelectedId(null);
+        overlayRef.current?.setPointerCapture(e.pointerId);
+        pointerIdRef.current = e.pointerId;
       }
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
+    // Prevent browser scroll/gesture during drag
+    e.preventDefault();
     const { nx, ny } = getNormalizedCoords(e);
     if (isDrawing && ['eraser', 'text', 'move-area', 'rect', 'circle', 'line', 'arrow', 'highlight'].includes(activeTool)) {
       setDrawCurrent({ nx: Math.max(0, Math.min(1, nx)), ny: Math.max(0, Math.min(1, ny)) });
@@ -368,6 +379,7 @@ export function PdfAnnotator() {
   const handlePointerUp = async () => {
     if (isDrawing) {
       setIsDrawing(false);
+      overlayRef.current?.releasePointerCapture(pointerIdRef.current ?? 0);
       const nw = Math.abs(drawCurrent.nx - drawStart.nx);
       const nh = Math.abs(drawCurrent.ny - drawStart.ny);
       const nx = Math.min(drawStart.nx, drawCurrent.nx);
@@ -380,11 +392,6 @@ export function PdfAnnotator() {
 
       if (activeTool === 'eraser' && nw > 0.005 && nh > 0.005) {
         addAnnotation({ id: Date.now().toString(), type: 'eraser', nx, ny, nw, nh });
-      } else if (activeTool === 'text') {
-        // Single click creates a small auto-sized text box that immediately enters edit mode
-        const newAnn: AnnotationType = { id: Date.now().toString(), type: 'text', nx, ny, nw: 0.08, nh: 0.025, text: '', fontFamily: textFont, fontSize: textSize, color: textColor, bold: textBold, italic: textItalic, underline: textUnderline, align: textAlign, opacity: textOpacity };
-        addAnnotation(newAnn);
-        setEditingTextId(newAnn.id); setSelectedId(newAnn.id); setActiveTool('select');
       } else if (activeTool === 'move-area' && nw > 0.005 && nh > 0.005 && pageData) {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -408,8 +415,13 @@ export function PdfAnnotator() {
         addAnnotation({ id: Date.now().toString(), type: 'arrow', nx, ny, nw, nh, strokeColor: shapeStrokeColor, strokeWidth: shapeStrokeWidth, opacity: shapeOpacity });
       } else if (activeTool === 'highlight' && nw > 0.005 && nh > 0.005) {
         addAnnotation({ id: Date.now().toString(), type: 'highlight', nx, ny, nw, nh, color: highlightColor, opacity: highlightOpacity });
+      } else if (activeTool === 'text' && nw > 0.005 && nh > 0.005) {
+        const newAnn: AnnotationType = { id: Date.now().toString(), type: 'text', nx, ny, nw, nh, text: '', fontFamily: textFont, fontSize: textSize, color: textColor, bold: textBold, italic: textItalic, underline: textUnderline, align: textAlign, opacity: textOpacity };
+        addAnnotation(newAnn);
+        setEditingTextId(newAnn.id); setSelectedId(newAnn.id); setActiveTool('select');
       }
     }
+    resizeLockRef.current = false;
     setInteraction(null);
   };
 
@@ -427,7 +439,10 @@ export function PdfAnnotator() {
   };
 
   const startMove = (e: React.PointerEvent, ann: AnnotationType) => {
+    console.log('[DEBUG startMove]', { activeTool, annId: ann.id, annType: ann.type, resizeLock: resizeLockRef.current, interaction: !!interaction });
     if (activeTool !== 'select') return;
+    // Check synchronous resize lock BEFORE the async interaction state check
+    if (resizeLockRef.current) return;
     if (interaction) return; // Don't start move if already interacting (e.g., resizing)
     e.stopPropagation(); setSelectedId(ann.id);
     if (ann.type === 'text') {
@@ -441,16 +456,24 @@ export function PdfAnnotator() {
   };
 
   const startResize = (e: React.PointerEvent, ann: AnnotationType) => {
+    console.log('[DEBUG startResize]', { activeTool, annId: ann.id, annType: ann.type, interaction: !!interaction });
     if (activeTool !== 'select') return;
     if (interaction) return; // Don't override an existing interaction
     if (ann.type !== 'rect' && ann.type !== 'circle' && ann.type !== 'highlight') return;
     e.stopPropagation();
     const { nx, ny } = getNormalizedCoords(e);
-    // Only resize if click is near a corner (within 15% of annotation size)
-    const CORNER_THRESHOLD = 0.15;
-    const leftSide = nx < ann.nx + CORNER_THRESHOLD * ann.nw || nx > ann.nx + (1 - CORNER_THRESHOLD) * ann.nw;
-    const topSide = ny < ann.ny + CORNER_THRESHOLD * ann.nh || ny > ann.ny + (1 - CORNER_THRESHOLD) * ann.nh;
-    if (!leftSide && !topSide) return; // Not near a corner → don't resize
+    // Corner threshold as fraction of annotation size
+    const CORNER = 0.15;
+    const leftSide = nx < ann.nx + CORNER * ann.nw;
+    const rightSide = nx > ann.nx + (1 - CORNER) * ann.nw;
+    const topSide = ny < ann.ny + CORNER * ann.nh;
+    const bottomSide = ny > ann.ny + (1 - CORNER) * ann.nh;
+    // Only resize from a TRUE corner — must be in a horizontal AND vertical edge zone
+    const inCorner = (leftSide || rightSide) && (topSide || bottomSide);
+    if (!inCorner) return; // Not in a corner → move only, don't resize
+    // Set synchronous flag BEFORE async setInteraction to prevent startMove race
+    resizeLockRef.current = true;
+    setSelectedId(ann.id); // Ensure selection border shows immediately
     setInteraction({ id: ann.id, type: 'resize', startNX: nx, startNY: ny, initialNX: ann.nx, initialNY: ann.ny, initialNW: ann.nw, initialNH: ann.nh });
   };
 
@@ -465,15 +488,27 @@ export function PdfAnnotator() {
     if (!file) return;
     setProcessing(true);
     try {
+      console.log('💾 handleSave: file=', file.name, 'annotations=', JSON.stringify(annotations));
       const modifiedPdfBytes = await applyAnnotationsToPdf(file, annotations);
+      console.log('✅ applyAnnotationsToPdf succeeded, bytes=', modifiedPdfBytes.length);
       downloadFile(modifiedPdfBytes, `annotated_${file.name}`, 'application/pdf');
       const modifiedFile = new File([modifiedPdfBytes], file.name, { type: 'application/pdf' });
-      setFile(modifiedFile); setAnnotations({}); setHistory([]); setHistoryIndex(-1);
-      loadPage(modifiedFile, currentPage);
-      addToast('success', 'PDF saved successfully!');
+      // Reload page with modified file BEFORE clearing annotations
+      try {
+        await loadPage(modifiedFile, currentPage);
+        setFile(modifiedFile);
+        setAnnotations({});
+        setHistory([]);
+        setHistoryIndex(-1);
+        addToast('success', 'PDF saved successfully!');
+      } catch (loadErr) {
+        // loadPage failed but PDF was downloaded successfully
+        console.error('Error reloading page after save:', loadErr);
+        addToast('error', 'PDF downloaded but preview failed to reload. Please re-upload the file.');
+      }
     } catch (error) { 
-      console.error("Error saving PDF:", error); 
-      addToast('error', 'Error saving PDF. Please try again.'); 
+      console.error("❌ handleSave error:", error); 
+      addToast('error', `Error saving PDF: ${error instanceof Error ? error.message : String(error)}`);
     }
     finally { setProcessing(false); }
   };
@@ -553,7 +588,7 @@ export function PdfAnnotator() {
           {/* Main tools */}
           <div className="flex gap-0.5 sm:gap-1 shrink-0">
             <Tooltip content="Select (V/1)" position="top">
-              <button onClick={() => { setActiveTool('select'); setSelectedId(null); }}
+              <button onClick={() => { setActiveTool('select'); setSelectedId(null); setEditingTextId(null); }}
                 className={cn("p-1.5 sm:p-2 rounded-lg transition-colors", activeTool === 'select' ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50")}>
                 <MousePointer2 className="w-4 h-4" />
               </button>
@@ -841,7 +876,8 @@ export function PdfAnnotator() {
                 activeTool === 'highlight' ? "cursor-crosshair" :
                 ['rect', 'circle', 'line', 'arrow'].includes(activeTool) ? "cursor-crosshair" :
                 "cursor-default")}
-              onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}>
+              onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}
+              style={{ touchAction: 'none' }}>
               {/* SVG hatching pattern for selection overlay */}
               <svg width="0" height="0" style={{ position: 'absolute' }}>
                 <defs>
@@ -853,13 +889,25 @@ export function PdfAnnotator() {
 
               {/* Drawing preview */}
               {isDrawing && (
-                <div className="absolute border-2 border-dashed border-blue-500 bg-blue-50/30 pointer-events-none"
-                  style={{
-                    left: `${Math.min(drawStart.nx, drawCurrent.nx) * 100}%`,
-                    top: `${Math.min(drawStart.ny, drawCurrent.ny) * 100}%`,
-                    width: `${Math.abs(drawCurrent.nx - drawStart.nx) * 100}%`,
-                    height: `${Math.abs(drawCurrent.ny - drawStart.ny) * 100}%`
-                  }} />
+                activeTool === 'text' ? (
+                  <div className="absolute border-2 border-dashed border-blue-500 bg-white/50 pointer-events-none flex items-start justify-start p-1"
+                    style={{
+                      left: `${Math.min(drawStart.nx, drawCurrent.nx) * 100}%`,
+                      top: `${Math.min(drawStart.ny, drawCurrent.ny) * 100}%`,
+                      width: `${Math.abs(drawCurrent.nx - drawStart.nx) * 100}%`,
+                      height: `${Math.abs(drawCurrent.ny - drawStart.ny) * 100}%`
+                    }}>
+                    <span className="text-gray-400 text-xs select-none" style={{ fontFamily: textFont, fontSize: 'inherit' }}>Type here...</span>
+                  </div>
+                ) : (
+                  <div className="absolute border-2 border-dashed border-blue-500 bg-blue-50/30 pointer-events-none"
+                    style={{
+                      left: `${Math.min(drawStart.nx, drawCurrent.nx) * 100}%`,
+                      top: `${Math.min(drawStart.ny, drawCurrent.ny) * 100}%`,
+                      width: `${Math.abs(drawCurrent.nx - drawStart.nx) * 100}%`,
+                      height: `${Math.abs(drawCurrent.ny - drawStart.ny) * 100}%`
+                    }} />
+                )
               )}
 
               {/* Render annotations */}
@@ -868,10 +916,7 @@ export function PdfAnnotator() {
 
                 // Text annotation
                 if (ann.type === 'text') {
-                  // Stamps (✗/✓) keep their color; other text uses white on dark pages for visibility
-                  const isStamp = ann.text === '✗' || ann.text === '✓';
-                  const pageIsDark = pageData?.isDarkPage ?? isDarkPage;
-                  const effectiveTextColor = isStamp ? ann.color : (pageIsDark ? '#FFFFFF' : ann.color);
+                  const effectiveTextColor = ann.color;
 
                   return (
                     <div key={ann.id}
@@ -880,8 +925,7 @@ export function PdfAnnotator() {
                       onPointerDown={(e) => {
                         if (editingTextId === ann.id) return; // Don't move while editing text
                         startMove(e, ann);
-                      }}
-                      onClick={(e) => { e.stopPropagation(); setEditingTextId(ann.id); }}>
+                      }}>
                       {/* Selection border — NO background fill for text annotations */}
                       {isSelected && !editingTextId && (
                         <svg className="absolute inset-0 w-full h-full pointer-events-none z-30" style={{ overflow: 'visible' }}>
@@ -901,9 +945,13 @@ export function PdfAnnotator() {
                           {ann.text || <span className="text-gray-400 dark:text-gray-500 italic">Click to edit...</span>}
                         </div>
                       )}
-                      {/* Delete button only — edit is 1-click now */}
+                      {/* Floating toolbar — Edit (pencil) + Delete */}
                       {activeTool === 'select' && isSelected && !editingTextId && (
                         <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex gap-1 transition-opacity opacity-100">
+                          <button onClick={(e) => { e.stopPropagation(); setEditingTextId(ann.id); }}
+                            className="bg-blue-500 hover:bg-blue-600 text-white p-1 rounded-full transition-colors">
+                            <Pencil className="w-3 h-3" />
+                          </button>
                           <button onClick={(e) => { e.stopPropagation(); deleteAnnotation(ann.id); }}
                             className="bg-red-500 hover:bg-red-600 text-white p-1 rounded-full transition-colors">
                             <Trash2 className="w-3 h-3" />
@@ -920,7 +968,25 @@ export function PdfAnnotator() {
                     <div key={ann.id}
                       className={cn("absolute group", activeTool === 'select' && "cursor-move", isSelected && "z-20")}
                       style={{ left: `${ann.nx * 100}%`, top: `${ann.ny * 100}%`, width: `${ann.nw * 100}%`, height: `${ann.nh * 100}%`, opacity: ann.opacity }}
-                      onPointerDown={(e) => startMove(e, ann)} onPointerDownCapture={(e) => { if (activeTool === 'select') startResize(e, ann); }}>
+                      onPointerDown={(e) => {
+                        if (activeTool !== 'select') return;
+                        e.stopPropagation();
+                        const { nx, ny } = getNormalizedCoords(e);
+                        const CORNER = 0.15;
+                        const leftSide = nx < ann.nx + CORNER * ann.nw;
+                        const rightSide = nx > ann.nx + (1 - CORNER) * ann.nw;
+                        const topSide = ny < ann.ny + CORNER * ann.nh;
+                        const bottomSide = ny > ann.ny + (1 - CORNER) * ann.nh;
+                        const inCorner = (leftSide || rightSide) && (topSide || bottomSide);
+                        resizeLockRef.current = true;
+                        setSelectedId(ann.id);
+                        if (inCorner) {
+                          setInteraction({ id: ann.id, type: 'resize', startNX: nx, startNY: ny, initialNX: ann.nx, initialNY: ann.ny, initialNW: ann.nw, initialNH: ann.nh });
+                        } else {
+                          setInteraction({ id: ann.id, type: 'move', startNX: nx, startNY: ny, initialNX: ann.nx, initialNY: ann.ny });
+                        }
+                        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                      }}>
                       {/* Selection border with hatching — visible on both light and dark backgrounds */}
                       {isSelected && (
                         <svg className="absolute inset-0 w-full h-full pointer-events-none z-30" style={{ overflow: 'visible' }}>
@@ -949,7 +1015,25 @@ export function PdfAnnotator() {
                     <div key={ann.id}
                       className={cn("absolute group", activeTool === 'select' && "cursor-move", isSelected && "z-20")}
                       style={{ left: `${ann.nx * 100}%`, top: `${ann.ny * 100}%`, width: `${ann.nw * 100}%`, height: `${ann.nh * 100}%`, opacity: ann.opacity }}
-                      onPointerDown={(e) => startMove(e, ann)} onPointerDownCapture={(e) => { if (activeTool === 'select') startResize(e, ann); }}>
+                      onPointerDown={(e) => {
+                        if (activeTool !== 'select') return;
+                        e.stopPropagation();
+                        const { nx, ny } = getNormalizedCoords(e);
+                        const CORNER = 0.15;
+                        const leftSide = nx < ann.nx + CORNER * ann.nw;
+                        const rightSide = nx > ann.nx + (1 - CORNER) * ann.nw;
+                        const topSide = ny < ann.ny + CORNER * ann.nh;
+                        const bottomSide = ny > ann.ny + (1 - CORNER) * ann.nh;
+                        const inCorner = (leftSide || rightSide) && (topSide || bottomSide);
+                        resizeLockRef.current = true;
+                        setSelectedId(ann.id);
+                        if (inCorner) {
+                          setInteraction({ id: ann.id, type: 'resize', startNX: nx, startNY: ny, initialNX: ann.nx, initialNY: ann.ny, initialNW: ann.nw, initialNH: ann.nh });
+                        } else {
+                          setInteraction({ id: ann.id, type: 'move', startNX: nx, startNY: ny, initialNX: ann.nx, initialNY: ann.ny });
+                        }
+                        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                      }}>
                       {/* Selection border with hatching — visible on both light and dark backgrounds */}
                       {isSelected && (
                         <svg className="absolute inset-0 w-full h-full pointer-events-none z-30" style={{ overflow: 'visible' }}>
@@ -958,7 +1042,14 @@ export function PdfAnnotator() {
                           <rect x="0" y="0" width="100%" height="100%" fill="none" stroke={isDarkPage ? "rgba(255,255,255,0.9)" : "rgba(59,130,246,0.9)"} strokeWidth="2" rx="1" />
                         </svg>
                       )}
-                      <div className="w-full h-full rounded-full" style={{ border: `${ann.strokeWidth}px solid ${ann.strokeColor}`, backgroundColor: ann.fillColor === '#FFFFFF' ? 'transparent' : ann.fillColor }} />
+                      <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
+                        <ellipse cx="50" cy="50" rx="49" ry="49"
+                          fill={ann.fillColor === '#FFFFFF' ? 'none' : ann.fillColor}
+                          stroke={ann.strokeColor}
+                          strokeWidth={ann.strokeWidth}
+                          opacity={ann.opacity}
+                        />
+                      </svg>
                       {/* Action buttons */}
                       {activeTool === 'select' && (
                         <div className={cn("absolute -top-8 left-1/2 -translate-x-1/2 flex gap-1 transition-opacity", isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
@@ -1102,97 +1193,6 @@ export function PdfAnnotator() {
                 return null;
               })}
 
-              {/* FLOATING TOOLBAR — annotation edit toolbar */}
-              {activeTool === 'select' && selectedId && (() => {
-                const sel = (annotations[currentPage] || []).find(a => a.id === selectedId);
-                if (!sel) return null;
-                const t = sel.type;
-                const isText = t === 'text';
-                const isShape = ['rect', 'circle', 'line', 'arrow'].includes(t);
-                const isHighlight = t === 'highlight';
-                const isRectCircle = t === 'rect' || t === 'circle';
-                // Type-narrowed refs to avoid union type errors
-                const textSel = sel as { color: string; bold: boolean; italic: boolean; underline: boolean; opacity?: number };
-                const shapeSel = sel as { strokeColor: string; strokeWidth: number; opacity?: number };
-                const hlSel = sel as { color: string; opacity?: number };
-                const rectSel = sel as { fillColor: string; strokeColor: string };
-                return (
-                  <div
-                    className="absolute z-50 flex items-center gap-0.5 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 px-2 py-1.5"
-                    style={{
-                      left: `${sel.nx * 100}%`,
-                      top: `${(sel.ny - 0.055) * 100}%`,
-                      minWidth: '200px',
-                      pointerEvents: 'all',
-                    }}
-                    onPointerDown={(e) => e.stopPropagation()}
-                  >
-                    {(isText || isShape) && (
-                      <div className="flex items-center gap-0.5 mr-1">
-                        {(isText ? ['#000000','#FF0000','#00AA00','#0066FF','#FF6600','#9900FF','#FFFFFF'] : COLOR_PRESETS).map(c => (
-                          <button key={c} title={c}
-                            onClick={() => handlePropertyChange(isText ? { color: c } : { strokeColor: c })}
-                            className={cn("w-5 h-5 rounded-full border-2 transition-transform hover:scale-110", isText ? (textSel.color === c ? "border-blue-500 scale-110" : "border-gray-300 dark:border-gray-600") : (shapeSel.strokeColor === c ? "border-blue-500 scale-110" : "border-gray-300 dark:border-gray-600"))}
-                            style={{ backgroundColor: c }} />
-                        ))}
-                      </div>
-                    )}
-                    {isHighlight && (
-                      <div className="flex items-center gap-0.5 mr-1">
-                        {['#FFFF00','#00FF00','#FFA500','#FF00FF','#00FFFF','#FF6600'].map(c => (
-                          <button key={c} title={c}
-                            onClick={() => handlePropertyChange({ color: c })}
-                            className={cn("w-5 h-5 rounded-full border-2 transition-transform hover:scale-110", hlSel.color === c ? "border-blue-500 scale-110" : "border-gray-300 dark:border-gray-600")}
-                            style={{ backgroundColor: c }} />
-                        ))}
-                      </div>
-                    )}
-                    {isShape && (
-                      <div className="flex items-center gap-0.5 mr-1 border-l border-gray-200 dark:border-gray-700 pl-1">
-                        {[1, 2, 3, 5].map(w => (
-                          <button key={w} title={`${w}px`}
-                            onClick={() => handlePropertyChange({ strokeWidth: w })}
-                            className={cn("w-6 h-6 rounded flex items-center justify-center transition-colors", shapeSel.strokeWidth === w ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600" : "hover:bg-gray-100 dark:hover:bg-gray-800")}>
-                            <div className="bg-current rounded-full" style={{ width: `${Math.min(w * 2, 12)}px`, height: `${Math.min(w * 2, 12)}px` }} />
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {(isShape || isHighlight) && (
-                      <div className="flex items-center gap-0.5 mr-1 border-l border-gray-200 dark:border-gray-700 pl-1">
-                        {[0.3, 0.6, 0.9, 1].map(o => (
-                          <button key={o} title={`${Math.round(o * 100)}%`}
-                            onClick={() => handlePropertyChange({ opacity: o })}
-                            className={cn("w-6 h-6 rounded text-xs font-medium transition-colors", Math.abs((isShape ? shapeSel.opacity ?? 1 : hlSel.opacity ?? 1) - o) < 0.05 ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600" : "hover:bg-gray-100 dark:hover:bg-gray-800")}>
-                            {Math.round(o * 100)}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {isText && !['✗','✓'].includes(sel.text || '') && (
-                      <div className="flex items-center gap-0.5 mr-1 border-l border-gray-200 dark:border-gray-700 pl-1">
-                        <button title="Bold" onClick={() => handlePropertyChange({ bold: !textSel.bold })}
-                          className={cn("w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-colors", textSel.bold ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600" : "hover:bg-gray-100 dark:hover:bg-gray-800")}>B</button>
-                        <button title="Italic" onClick={() => handlePropertyChange({ italic: !textSel.italic })}
-                          className={cn("w-6 h-6 rounded flex items-center justify-center text-xs italic transition-colors", textSel.italic ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600" : "hover:bg-gray-100 dark:hover:bg-gray-800")}>I</button>
-                        <button title="Underline" onClick={() => handlePropertyChange({ underline: !textSel.underline })}
-                          className={cn("w-6 h-6 rounded flex items-center justify-center text-xs underline transition-colors", textSel.underline ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600" : "hover:bg-gray-100 dark:hover:bg-gray-800")}>U</button>
-                      </div>
-                    )}
-                    {isRectCircle && (
-                      <button title="Toggle fill"
-                        onClick={() => handlePropertyChange({ fillColor: rectSel.fillColor === '#FFFFFF' ? shapeSel.strokeColor : '#FFFFFF' })}
-                        className="w-6 h-6 rounded border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center text-xs mr-1 hover:bg-gray-100 dark:hover:bg-gray-800">
-                        <div className={cn("w-3 h-3 rounded-sm", rectSel.fillColor === '#FFFFFF' ? "bg-transparent border border-gray-400" : "")} style={{ backgroundColor: rectSel.fillColor === '#FFFFFF' ? undefined : rectSel.fillColor }} />
-                      </button>
-                    )}
-                    <button title="Delete" onClick={() => deleteAnnotation(sel.id)}
-                      className="w-6 h-6 rounded flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors ml-1 border-l border-gray-200 dark:border-gray-700 pl-1">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                );
-              })()}
             </div>
           </div>
         )}

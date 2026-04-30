@@ -193,8 +193,8 @@ export async function applyAnnotationsToPdf(
 
   // Draw a checkmark (✓) using path strokes — font-independent, always renders correctly
   const drawCheckmark = (page: any, cx: number, cy: number, size: number, color: any, opacity: number) => {
-    // Checkmark shape: short stroke down-right, then long stroke up-right
-    const thickness = Math.max(2, size * 0.13);
+    // Thinner stroke for better proportion (10% of size, minimum 1.5pt)
+    const thickness = Math.max(1.5, size * 0.10);
     // Short stroke: from (cx - 0.35s, cy - 0.1s) to (cx - 0.05s, cy - 0.4s)
     page.drawLine({
       start: { x: cx - size * 0.35, y: cy - size * 0.1 },
@@ -215,7 +215,7 @@ export async function applyAnnotationsToPdf(
 
   // Draw an X mark (✗) using path strokes — font-independent
   const drawXMark = (page: any, cx: number, cy: number, size: number, color: any, opacity: number) => {
-    const thickness = Math.max(2, size * 0.13);
+    const thickness = Math.max(1.5, size * 0.10);
     // Diagonal 1: from (cx - 0.3s, cy - 0.3s) to (cx + 0.3s, cy + 0.3s)
     page.drawLine({
       start: { x: cx - size * 0.3, y: cy - size * 0.3 },
@@ -290,14 +290,16 @@ export async function applyAnnotationsToPdf(
           const cx = x + w / 2;
           const cy = y + h / 2;
           // Make checkmark proportional to the annotation box (not absolute fontSize)
-          const checkSize = Math.min(w, h) * 0.65;
+          const checkSize = Math.min(w, h) * 0.50;
           drawCheckmark(page, cx, cy, checkSize, colorRgb, ann.opacity || 1);
+          continue;
         } else if (ann.text === '✗' || ann.text === '☒') {
           const cx = x + w / 2;
           const cy = y + h / 2;
           // Make X mark proportional to the annotation box (not absolute fontSize)
-          const xSize = Math.min(w, h) * 0.65;
+          const xSize = Math.min(w, h) * 0.50;
           drawXMark(page, cx, cy, xSize, colorRgb, ann.opacity || 1);
+          continue;
         } else {
           // Regular text — strip any remaining non-WinAnsi chars and render
           const safeText = ann.text.replace(/[^\x00-\xFF]/g, '');
