@@ -10,7 +10,7 @@ async function getPdfJs() {
     // Import pdfjs-dist using the standard build path for version 3.x
     const pdfjs = await import('pdfjs-dist/build/pdf');
     // Use the official pdfjs worker from jsdelivr CDN
-    pdfjs.GlobalWorkerOptions.workerSrc = 
+    pdfjs.GlobalWorkerOptions.workerSrc =
       'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
     pdfjsLib = pdfjs;
   }
@@ -75,7 +75,7 @@ let cachedPdf: { file: File; pdf: any } | null = null;
 export async function getPdfDocument(file: File) {
   // Create cache key from file metadata
   const cacheKey = `${file.name}-${file.size}-${file.lastModified}`;
-  
+
   if (cachedPdf && cachedPdf.file.name === file.name && cachedPdf.file.size === file.size && cachedPdf.file.lastModified === file.lastModified) {
     return cachedPdf.pdf;
   }
@@ -158,34 +158,110 @@ export async function applyAnnotationsToPdf(
   file: File,
   annotationsByPage: Record<number, any[]>
 ): Promise<Uint8Array> {
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await PDFDocument.load(arrayBuffer);
+  let arrayBuffer: ArrayBuffer;
+  try {
+    arrayBuffer = await file.arrayBuffer();
+  } catch (err) {
+    console.error('❌ applyAnnotationsToPdf: file.arrayBuffer() failed:', err, 'file:', file.name, 'size:', file.size);
+    throw new Error(`Failed to read file: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  let pdf;
+  try {
+    pdf = await PDFDocument.load(arrayBuffer);
+  } catch (err) {
+    console.error('❌ PDFDocument.load failed:', err, 'file:', file.name, 'size:', file.size);
+    throw new Error(`PDF is corrupted or password-protected: ${err instanceof Error ? err.message : String(err)}`);
+  }
   const helveticaFont = await pdf.embedFont(StandardFonts.Helvetica);
   const helveticaBold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const helveticaItalic = await pdf.embedFont(StandardFonts.HelveticaBoldOblique);
+
   const pages = pdf.getPages();
 
   const hexToRgb = (hex: string) => {
-    const h = hex.replace('#', '');
-    return {
-      r: parseInt(h.substring(0, 2), 16) / 255,
-      g: parseInt(h.substring(2, 4), 16) / 255,
-      b: parseInt(h.substring(4, 6), 16) / 255,
-    };
+    // Remove # prefix and handle shorthand (3-char) hex like #F00 → #FF0000
+    let h = hex.replace(/^#/, '');
+    if (h.length === 3) {
+      h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    }
+    h = (h.padEnd(6, '0').slice(0, 6));
+    const r = parseInt(h.slice(0, 2), 16) / 255;
+    const g = parseInt(h.slice(2, 4), 16) / 255;
+    const b = parseInt(h.slice(4, 6), 16) / 255;
+    return { r: isNaN(r) ? 0 : r, g: isNaN(g) ? 0 : g, b: isNaN(b) ? 0 : b };
+  };
+
+  // Draw a checkmark (✓) using path strokes — font-independent, always renders correctly
+  const drawCheckmark = (page: any, cx: number, cy: number, size: number, color: any, opacity: number) => {
+    // Checkmark shape: short stroke down-right, then long stroke up-right
+    const thickness = Math.max(2, size * 0.13);
+    // Short stroke: from (cx - 0.35s, cy - 0.1s) to (cx - 0.05s, cy - 0.4s)
+    page.drawLine({
+      start: { x: cx - size * 0.35, y: cy - size * 0.1 },
+      end: { x: cx - size * 0.05, y: cy - size * 0.4 },
+      thickness,
+      color,
+      opacity,
+    });
+    // Long stroke: from (cx - 0.05s, cy - 0.4s) to (cx + 0.35s, cy + 0.3s)
+    page.drawLine({
+      start: { x: cx - size * 0.05, y: cy - size * 0.4 },
+      end: { x: cx + size * 0.35, y: cy + size * 0.3 },
+      thickness,
+      color,
+      opacity,
+    });
+  };
+
+  // Draw an X mark (✗) using path strokes — font-independent
+  const drawXMark = (page: any, cx: number, cy: number, size: number, color: any, opacity: number) => {
+    const thickness = Math.max(2, size * 0.13);
+    // Diagonal 1: from (cx - 0.3s, cy - 0.3s) to (cx + 0.3s, cy + 0.3s)
+    page.drawLine({
+      start: { x: cx - size * 0.3, y: cy - size * 0.3 },
+      end: { x: cx + size * 0.3, y: cy + size * 0.3 },
+      thickness,
+      color,
+      opacity,
+    });
+    // Diagonal 2: from (cx + 0.3s, cy - 0.3s) to (cx - 0.3s, cy + 0.3s)
+    page.drawLine({
+      start: { x: cx + size * 0.3, y: cy - size * 0.3 },
+      end: { x: cx - size * 0.3, y: cy + size * 0.3 },
+      thickness,
+      color,
+      opacity,
+    });
   };
 
   for (const [pageIndexStr, annotations] of Object.entries(annotationsByPage)) {
     const pageIndex = parseInt(pageIndexStr, 10);
     const page = pages[pageIndex];
-    if (!page) continue;
+    if (!page) { console.warn(`⚠️ Page ${pageIndex} not found, skipping`); continue; }
 
     const { width: pdfWidth, height: pdfHeight } = page.getSize();
+    console.log(`📄 Page ${pageIndex}: ${pdfWidth}x${pdfHeight}`);
 
     for (const ann of annotations) {
+      // Validate normalized coordinates
+      if (ann.nx == null || ann.ny == null || ann.nw == null || ann.nh == null) {
+        console.error('❌ Annotation missing normalized coords:', ann.id, ann.type);
+        continue;
+      }
+      if (isNaN(ann.nx) || isNaN(ann.ny) || isNaN(ann.nw) || isNaN(ann.nh)) {
+        console.error('❌ Annotation has NaN coords:', ann.id, ann.type, { nx: ann.nx, ny: ann.ny, nw: ann.nw, nh: ann.nh });
+        continue;
+      }
+
       const x = ann.nx * pdfWidth;
       const y = pdfHeight - ann.ny * pdfHeight - ann.nh * pdfHeight;
       const w = ann.nw * pdfWidth;
       const h = ann.nh * pdfHeight;
+
+      if (w <= 0 || h <= 0) {
+        console.error('❌ Annotation has invalid dimensions:', ann.id, { w, h });
+        continue;
+      }
 
       if (ann.type === 'eraser') {
         page.drawRectangle({ x, y, width: w, height: h, color: rgb(1, 1, 1) });
@@ -205,34 +281,54 @@ export async function applyAnnotationsToPdf(
       } else if (ann.type === 'text') {
         if (!ann.text) continue;
         const size = ann.fontSize;
-        const textY = pdfHeight - ann.ny * pdfHeight - size;
         const { r, g, b } = hexToRgb(ann.color);
-        const font = ann.bold ? helveticaBold : ann.italic ? helveticaItalic : helveticaFont;
-        
-        // Handle text alignment
-        let textX = x;
-        if (ann.align === 'center') textX = x + w / 2;
-        else if (ann.align === 'right') textX = x + w - w * 0.9;
-        
-        page.drawText(ann.text, {
-          x: textX,
-          y: textY,
-          size,
-          font,
-          color: rgb(r, g, b),
-          maxWidth: w * 0.9,
-          lineHeight: size * 1.2,
-          opacity: ann.opacity || 1,
-        });
-        
-        if (ann.underline) {
-          page.drawLine({
-            start: { x: textX, y: textY - 2 },
-            end: { x: textX + w * 0.9, y: textY - 2 },
-            thickness: size / 12,
-            color: rgb(r, g, b),
+        const colorRgb = rgb(r, g, b);
+
+        // Draw checkmark or X mark using strokes — no font encoding issues
+        if (ann.text === '✓' || ann.text === '☑') {
+          // Center of text bounding box
+          const cx = x + w / 2;
+          const cy = y + h / 2;
+          // Make checkmark proportional to the annotation box (not absolute fontSize)
+          const checkSize = Math.min(w, h) * 0.65;
+          drawCheckmark(page, cx, cy, checkSize, colorRgb, ann.opacity || 1);
+        } else if (ann.text === '✗' || ann.text === '☒') {
+          const cx = x + w / 2;
+          const cy = y + h / 2;
+          // Make X mark proportional to the annotation box (not absolute fontSize)
+          const xSize = Math.min(w, h) * 0.65;
+          drawXMark(page, cx, cy, xSize, colorRgb, ann.opacity || 1);
+        } else {
+          // Regular text — strip any remaining non-WinAnsi chars and render
+          const safeText = ann.text.replace(/[^\x00-\xFF]/g, '');
+          if (!safeText) continue;
+          const textY = pdfHeight - ann.ny * pdfHeight - size;
+          const font = ann.bold ? helveticaBold : ann.italic ? helveticaItalic : helveticaFont;
+
+          let textX = x;
+          if (ann.align === 'center') textX = x + w / 2;
+          else if (ann.align === 'right') textX = x + w - w * 0.9;
+
+          page.drawText(safeText, {
+            x: textX,
+            y: textY,
+            size,
+            font,
+            color: colorRgb,
+            maxWidth: w * 0.9,
+            lineHeight: size * 1.2,
             opacity: ann.opacity || 1,
           });
+
+          if (ann.underline) {
+            page.drawLine({
+              start: { x: textX, y: textY - 2 },
+              end: { x: textX + w * 0.9, y: textY - 2 },
+              thickness: size / 12,
+              color: colorRgb,
+              opacity: ann.opacity || 1,
+            });
+          }
         }
       } else if (ann.type === 'rect') {
         const { r, g, b } = hexToRgb(ann.strokeColor);
@@ -270,7 +366,7 @@ export async function applyAnnotationsToPdf(
         const endY = y;
         const headLen = Math.min(15, w * 0.15);
         const angle = Math.atan2(-h, w);
-        
+
         // Draw line
         page.drawLine({
           start: { x, y: y + h },
@@ -279,13 +375,13 @@ export async function applyAnnotationsToPdf(
           color: rgb(r, g, b),
           opacity: ann.opacity || 1,
         });
-        
+
         // Draw arrowhead
         const ax1 = endX - headLen * Math.cos(angle - Math.PI / 6);
         const ay1 = endY + headLen * Math.sin(angle - Math.PI / 6) + h;
         const ax2 = endX - headLen * Math.cos(angle + Math.PI / 6);
         const ay2 = endY + headLen * Math.sin(angle + Math.PI / 6) + h;
-        
+
         page.drawLine({
           start: { x: endX, y: endY },
           end: { x: ax1, y: ay1 },
@@ -319,35 +415,37 @@ export function downloadFile(
   filename: string,
   mimeType: string
 ) {
-  let blob: Blob;
-  if (typeof data === 'string') {
-    const byteString = atob(data.split(',')[1]);
-    const mimeString = data.split(',')[0].split(':')[1].split(';')[0];
-    const ab = new ArrayBuffer(byteString.length);
-    const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++) {
-      ia[i] = byteString.charCodeAt(i);
+  try {
+    let blob: Blob;
+    if (typeof data === 'string') {
+      const byteString = atob(data.split(',')[1]);
+      const mimeString = data.split(',')[0].split(':')[1].split(';')[0];
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      blob = new Blob([ab], { type: mimeString });
+    } else if (data instanceof Uint8Array) {
+      blob = new Blob([data], { type: mimeType });
+    } else {
+      blob = data;
     }
-    blob = new Blob([ab], { type: mimeString });
-  } else if (data instanceof Uint8Array) {
-    blob = new Blob([data], { type: mimeType });
-  } else {
-    blob = data;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Download failed:', err);
+    alert(`Download failed: ${err instanceof Error ? err.message : String(err)}`);
   }
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }
 
 // PDF Encryption using pdf-lib-plus-encrypt (AES-256)
-// pdf-lib-plus-encrypt is a drop-in replacement for pdf-lib with built-in encryption support
-// Decryption requires server-side processing due to browser security restrictions
-
 export async function encryptPdf(file: File, password: string): Promise<Uint8Array> {
   const arrayBuffer = await file.arrayBuffer();
   const pdfDoc = await PDFDocument.load(arrayBuffer);
@@ -360,20 +458,17 @@ export async function encryptPdf(file: File, password: string): Promise<Uint8Arr
       annotating: true,
       fillingForms: true,
     },
-    pdfVersion: '1.7ext3', // V=5 encryption = AES-256
+    pdfVersion: '1.7ext3',
   });
   return await pdfDoc.save();
 }
 
 export async function decryptPdf(file: File, password: string): Promise<Uint8Array> {
-  // Browser cannot decrypt PDFs - requires server-side processing
-  // For security reasons, browsers block attempts to decrypt encrypted PDFs
   console.warn('PDF decryption is not available in browser. This requires server-side processing.');
   throw new Error('PDF decryption is not supported in browser. Please use a desktop PDF application to decrypt the file, then upload it again.');
 }
 
 export async function removePdfPassword(file: File, currentPassword: string): Promise<Uint8Array> {
-  // Browser cannot remove password - requires server-side processing
   console.warn('PDF password removal is not available in browser.');
   throw new Error('PDF password removal is not supported in browser. Please use a desktop PDF application to remove the password.');
 }
@@ -382,9 +477,8 @@ export async function isPdfPasswordProtected(file: File): Promise<boolean> {
   try {
     const arrayBuffer = await file.arrayBuffer();
     await PDFDocument.load(arrayBuffer);
-    return false; // No password required
+    return false;
   } catch (error: any) {
-    // If error mentions password, it's protected
     if (error.message && (error.message.includes('password') || error.message.includes('encrypted'))) {
       return true;
     }
